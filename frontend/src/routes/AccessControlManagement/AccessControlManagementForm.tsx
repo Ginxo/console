@@ -2,7 +2,7 @@
 import { useCallback, useContext, useEffect, useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom-v5-compat'
 import { AcmDataFormPage } from '../../components/AcmDataForm'
-import { FormData } from '../../components/AcmFormData'
+import { FormData, Section } from '../../components/AcmFormData'
 import { LostChangesContext } from '../../components/LostChanges'
 import { useTranslation } from '../../lib/acm-i18next'
 import { NavigationPath, useBackCancelNavigation } from '../../NavigationPath'
@@ -16,6 +16,8 @@ import {
 } from '../../ui-components'
 import { useAllClusters } from '../Infrastructure/Clusters/ManagedClusters/components/useAllClusters'
 import schema from './schema.json'
+import { RoleBinding } from '../../resources/access-control'
+
 
 const AccessControlManagementForm = (
   { isEditing, isViewing, handleModalToggle, hideYaml, accessControl }: {
@@ -35,12 +37,20 @@ const AccessControlManagementForm = (
   const managedClusters = useAllClusters(true)
 
   // Form Values
-  const [cluster, setCluster] = useState('')
+  const [namespace, setNamespace] = useState('')
+  const [role, setRole] = useState('')
+  const [createdDate, setCreatedDate] = useState('')
+  const [selectedUsers, setSelectedUsers] = useState<RoleBinding[]>([])
+
+
   const { submitForm } = useContext(LostChangesContext)
 
   useEffect(() => {
-    setCluster(accessControl?.data?.cluster ?? '')
-  }, [accessControl?.data])
+    setNamespace(accessControl?.metadata?.namespace ?? '')
+    setRole(accessControl?.metadata?.name ?? '')
+    setCreatedDate(accessControl?.metadata?.creationTimestamp ?? '')
+    setSelectedUsers((accessControl?.spec?.roleBindings ?? []) as RoleBinding[])
+  }, [accessControl?.metadata])
 
   const { cancelForm } = useContext(LostChangesContext)
   const guardedHandleModalToggle = useCallback(() => cancelForm(handleModalToggle), [cancelForm, handleModalToggle])
@@ -56,19 +66,21 @@ const AccessControlManagementForm = (
     data: {
       id: '',
       namespaces: [],
-      cluster: cluster,
+      cluster: namespace,
       roles: [],
       creationTimestamp: ''
     },
   })
 
   const stateToSyncs = () => [
-    { path: 'AccessControl[0].data.cluster', setState: setCluster },
+    { path: 'AccessControl[0].metadata.namespace', setState: setNamespace },
+    { path: 'AccessControl[0].metadata.name', setState: setRole },
+
   ]
 
-  const title = isViewing ? accessControl?.data?.id! : isEditing ? t('Edit access control') : t('Add access control')
+  const title = isViewing ? accessControl?.metadata?.uid! : isEditing ? t('Edit access control') : t('Add access control')
   const breadcrumbs = [{ text: t('Access Controls'), to: NavigationPath.accessControlManagement }, { text: title }]
-
+  
   const formData: FormData = {
     title,
     description: t('An access control stores the... TO BE DEFINED'),
@@ -80,21 +92,75 @@ const AccessControlManagementForm = (
         wizardTitle: t('Enter the basic Access Control information'),
         inputs: [
           {
-            id: 'cluster',
+            id: 'namespace',
             type: 'Select',
             label: t('Cluster'),
-            value: cluster,
-            onChange: setCluster,
-            options: managedClusters.map(cluster => ({
-              id: cluster.name,
-              value: cluster.name,
-              text: cluster.name,
+            value: namespace,
+            onChange: setNamespace,
+            options: managedClusters.map(namespace => ({
+              id: namespace.name,
+              value: namespace.name,
+              text: namespace.name,
             })),
             isRequired: true,
             isDisabled: false
           },
+          {
+            id: 'name',
+            type: 'Text',
+            label: 'Name',
+            placeholder: 'name',
+            value: role,
+            onChange: setRole,
+            isRequired: true,
+          },
+          {
+            id: 'date',
+            type: 'Text',
+            label: t('Created at'),
+            value: createdDate,
+            onChange: setCreatedDate,
+            isRequired: true,
+            isDisabled: false,
+          },             
         ],
-      }
+
+      },  
+      {
+        type: 'SectionGroup',
+        title: 'Access Control Information',
+        sections: [
+          ...[...new Set(selectedUsers.map(user => user.namespace))].map((namespace, index) => {
+            const usersForNamespace = selectedUsers.filter(user => user.namespace === namespace);
+            const rolesForNamespace = [...new Set(usersForNamespace.map(user => user.roleRef.name))];
+            return {
+              type: 'Section',
+              title: namespace,
+              wizardTitle: t(`Enter the Access Control information for ${namespace}`),
+              inputs: [
+                {
+                  id: `${index}`,
+                  type: 'Text',
+                  label: 'Users',
+                  value: [...new Set(usersForNamespace.map(user => user.subject.name))].join(', '),
+                  onChange: () => {},
+                  isRequired: true,
+                  isDisabled: true,
+                },
+                {
+                  id: `${index}`,
+                  type: 'Text',
+                  label: 'Roles',
+                  value: [...new Set(rolesForNamespace)].join(', '),
+                  onChange: () => {},
+                  isRequired: true,
+                  isDisabled: true,
+                }
+              ]
+            }as Section;
+          })
+        ]
+      },
     ],
     submit: () => {
       let accessControlData = formData?.customData ?? stateToData()
@@ -104,12 +170,12 @@ const AccessControlManagementForm = (
       if (isEditing) {
         const accessControl = accessControlData as AccessControl
         const patch: { op: 'replace'; path: string; value: unknown }[] = []
-        const data: AccessControl['data'] = { ...accessControl.data!, cluster } // TODO: the rest of fields
+        const data: AccessControl['metadata'] = { ...accessControl.metadata!, namespace } // TODO: the rest of fields
         patch.push({ op: 'replace', path: `/data`, value: data })
         return patchResource(accessControl, patch).promise.then(() => {
           toastContext.addAlert({
             title: t('Acccess Control updated'),
-            message: t('accessControlForm.updated.message', { id: data.id }),
+            message: t('accessControlForm.updated.message', { id: data.uid }),
             type: 'success',
             autoClose: true,
           })
@@ -120,7 +186,7 @@ const AccessControlManagementForm = (
         return createResource(accessControlData as IResource).promise.then((resource) => {
           toastContext.addAlert({
             title: t('Access Control created'),
-            message: t('accessControlForm.created.message', { id: (resource as AccessControl).data?.id }),
+            message: t('accessControlForm.created.message', { id: (resource as AccessControl).metadata?.uid }),
             type: 'success',
             autoClose: true,
           })
@@ -162,7 +228,7 @@ const AccessControlManagementForm = (
       }
       edit={() => navigate(
         generatePath(NavigationPath.editAccessControlManagement, {
-          id: accessControl?.data?.id!,
+          id: accessControl?.metadata?.uid!,
         })
       )}
       isModalWizard={!!handleModalToggle}
