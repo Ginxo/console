@@ -158,6 +158,11 @@ export interface NumberInput extends InputBase<number> {
   unit?: ReactNode
 }
 
+export interface RadioInput extends SelectOptionsBase<string> {
+  type: 'Radio'
+  isInline?: boolean
+}
+
 export interface FormDataOrderedInput<T = any> extends InputBase<T[]> {
   type: 'OrderedItems'
   keyFn: (item: T, index: number) => string
@@ -181,3 +186,4 @@ export type Input =
   | NumberInput
   | FormDataOrderedInput
   | CheckboxInput
+  | RadioInput

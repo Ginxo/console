@@ -9,7 +9,7 @@ import { NavigationPath, useBackCancelNavigation } from '../../NavigationPath'
 import {
   IResource
 } from '../../resources'
-import { AccessControl, AccessControlApiVersion, AccessControlKind } from '../../resources/access-control'
+import { AccessControl, AccessControlApiVersion } from '../../resources/access-control'
 import { createResource, patchResource } from '../../resources/utils'
 import {
   AcmToastContext
@@ -39,46 +39,41 @@ const AccessControlManagementForm = (
 
   // Form Values
   const [namespace, setNamespace] = useState('')
-  const [role, setRole] = useState('')
   const [createdDate, setCreatedDate] = useState('')
   const [selectedUsers, setSelectedUsers] = useState<RoleBinding[]>([])
-
+  const [name, setName] = useState('')
 
   const { submitForm } = useContext(LostChangesContext)
 
   useEffect(() => {
     setNamespace(accessControl?.metadata?.namespace ?? '')
-    setRole(accessControl?.metadata?.name ?? '')
     setCreatedDate(accessControl?.metadata?.creationTimestamp ?? '')
     setSelectedUsers((accessControl?.spec?.roleBindings ?? []) as RoleBinding[])
+    setName(accessControl?.metadata?.name ?? '')
   }, [accessControl?.metadata])
 
   const { cancelForm } = useContext(LostChangesContext)
   const guardedHandleModalToggle = useCallback(() => cancelForm(handleModalToggle), [cancelForm, handleModalToggle])
 
-  const stateToData = () => ({
+  const stateToData = () => [{
     apiVersion: AccessControlApiVersion,
-    kind: AccessControlKind,
-    type: 'Opaque',
+    kind: accessControl?.kind,
     metadata: {
-      name: 'tbd', //TODO: proper name and namespace
-      namespace: 'tbd',
+      name,
+      namespace,
     },
-    data: {
-      id: '',
-      namespaces: [],
-      cluster: namespace,
-      roles: [],
-      creationTimestamp: ''
+    spec: {
+      roleBindings: selectedUsers,
     },
-  })
+    }];
 
   const stateToSyncs = () => [
     { path: 'AccessControl[0].metadata.namespace', setState: setNamespace },
-    { path: 'AccessControl[0].metadata.name', setState: setRole },
-
+    { path: 'AccessControl[0].metadata.name', setState: setName },
+    { path: 'AccessControl[0].spec.roleBindings', setState: setSelectedUsers },
   ]
-
+  
+ 
   const title = isViewing ? accessControl?.metadata?.uid! : isEditing ? t('Edit access control') : t('Add access control')
   const breadcrumbs = [{ text: t('Access Controls'), to: NavigationPath.accessControlManagement }, { text: title }]
   
@@ -97,11 +92,12 @@ const AccessControlManagementForm = (
             type: 'Select',
             label: t('Cluster'),
             value: namespace,
-            onChange: setNamespace,
+            onChange: (value) => {
+              setNamespace(value)
+            },
             options: managedClusters.map(namespace => ({
               id: namespace.name,
               value: namespace.name,
-              text: namespace.name,
             })),
             isRequired: true,
             isDisabled: false
@@ -111,8 +107,8 @@ const AccessControlManagementForm = (
             type: 'Text',
             label: 'Name',
             placeholder: 'name',
-            value: role,
-            onChange: setRole,
+            value: name,
+            onChange: setName,
             isRequired: true,
           },
           {
@@ -142,17 +138,71 @@ const AccessControlManagementForm = (
                 type: 'Text',
                 label: 'Namespace',
                 value: user.namespace || '',
-                onChange: () => {},
+                onChange: (value: string) => {
+                  setSelectedUsers((prev) => {
+                    const updated = [...prev]
+                    updated[index] = {
+                      ...updated[index],
+                      namespace: value,
+                    }
+                    return updated
+                  })
+                },
                 isRequired: true,
+              },
+              {
+                id: `subject-kind-${index}`,
+                type: 'Radio',
+                label: '',
+                value: user.subject?.kind.toLowerCase() || 'user',
+                onChange: (value: string) => {
+                  setSelectedUsers((prev) => {
+                    const updated = [...prev]
+                    const current = updated[index]
+                    const kind = value === 'user' ? 'User' : 'Group' as 'User' | 'Group'
+
+                    const newSubject = {
+                      kind,
+                      apiGroup: 'rbac.authorization.k8s.io',
+                      name: current.subject?.name || '',
+                    }
+                    updated[index] = {
+                      ...current,
+                      subject: newSubject,
+                    }
+                    return updated
+                  })
+                },
+                options: [
+                  { id: 'user', value: 'user', text: t('User') },
+                  { id: 'group', value: 'group', text: t('Group') },
+                ],
+                isRequired: true,
+                isHidden: isViewing ? true : false,
               },
               {
                 id: `subject-${index}`,
                 type: 'Text',
-                label: 'User',
+                label: user.subject?.kind === 'Group' ? t('Group name') : t('User name'),
                 value: user.subject?.name || '',
-                onChange: () => {},
+                onChange: (value: string) => {
+                  setSelectedUsers((prev) => {
+                    const updated = [...prev]
+                    const current = updated[index]
+                    const newSubject = {
+                      kind: current.subject?.kind || 'User',
+                      apiGroup: 'rbac.authorization.k8s.io',
+                      name: value,
+                    }
+                    updated[index] = {
+                      ...current,
+                      subject: newSubject,
+                    }
+                    return updated
+                  })
+                },
                 isRequired: true,
-              },
+              },              
               {
                 id: `role-${index}`,
                 type: 'Select',
@@ -185,13 +235,14 @@ const AccessControlManagementForm = (
       }
       if (isEditing) {
         const accessControl = accessControlData as AccessControl
+        console.log(accessControl,'accessControl')
         const patch: { op: 'replace'; path: string; value: unknown }[] = []
-        const data: AccessControl['metadata'] = { ...accessControl.metadata!, namespace } // TODO: the rest of fields
-        patch.push({ op: 'replace', path: `/data`, value: data })
+        const metadata: AccessControl['metadata'] = accessControl.metadata!
+        patch.push({ op: 'replace', path: `/spec/roleBindings`, value: selectedUsers })
         return patchResource(accessControl, patch).promise.then(() => {
           toastContext.addAlert({
             title: t('Acccess Control updated'),
-            message: t('accessControlForm.updated.message', { id: data.uid }),
+            message: t('accessControlForm.updated.message', { id: metadata.uid }),
             type: 'success',
             autoClose: true,
           })

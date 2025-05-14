@@ -60,6 +60,7 @@ import {
   WizardFooterType,
   WizardStepProps,
   WizardHeader,
+  Radio,
 } from '@patternfly/react-core'
 import { Select, SelectGroup, SelectOption, SelectOptionObject, SelectProps } from '@patternfly/react-core/deprecated'
 import { ValidatedOptions } from '@patternfly/react-core/dist/js/helpers/constants'
@@ -915,6 +916,23 @@ function AcmInputDescription(props: { input: Input }): JSX.Element {
         </DescriptionListGroup>
       )
     }
+    case 'Radio':{
+      return (
+        <FormGroup label={input.label} isRequired={input.isRequired} fieldId={input.id}>
+          {input.options.map((option) => (
+            <Radio
+              key={option.id}
+              id={option.id}
+              name={input.id}
+              label={option.text}
+              value={option.value}
+              isChecked={input.value === option.value}
+              onChange={() => input.onChange(option.value)}
+            />
+          ))}
+        </FormGroup>
+      )
+    }
   }
 }
 
@@ -1243,6 +1261,23 @@ export function AcmDataFormInput(props: { input: Input; validated?: 'error'; isR
         <Alert isInline variant={input.variant} title={input.labelHelpTitle}>
           {input.reactNode}
         </Alert>
+      )
+    }
+    case 'Radio':{
+      return (
+        <FormGroup label={input.label} isRequired={input.isRequired} fieldId={input.id} isInline>
+          {input.options.map((option) => (
+            <Radio
+              key={option.id}
+              id={option.id}
+              name={input.id}
+              label={option.text}
+              value={option.value}
+              isChecked={input.value === option.value}
+              onChange={() => input.onChange(option.value)}
+            />
+          ))}
+        </FormGroup>
       )
     }
   }
