@@ -20,12 +20,13 @@ import { RoleBinding } from '../../resources/access-control'
 
 
 const AccessControlManagementForm = (
-  { isEditing, isViewing, handleModalToggle, hideYaml, accessControl }: {
+  { isEditing, isViewing, handleModalToggle, hideYaml, accessControl, namespaces: namespacesProp, }: {
     isEditing: boolean
     isViewing: boolean
     handleModalToggle?: () => void
     hideYaml?: boolean
     accessControl?: AccessControl
+    namespaces?: string[]
   }
 ) => {
   const { t } = useTranslation()
@@ -52,18 +53,43 @@ const AccessControlManagementForm = (
     setName(accessControl?.metadata?.name ?? '')
   }, [accessControl?.metadata])
 
+  console.log(namespacesProp,'namespacesProp')
+  console.log(accessControl,'accessControl')
+
+  useEffect(() => {
+    if (!isEditing && !isViewing && selectedUsers.length === 0) {
+      setSelectedUsers([
+        {
+          namespace, 
+          roleRef: {
+            name: '',
+            apiGroup: 'rbac.authorization.k8s.io',
+            kind:'Role',
+          },
+          subject: {
+            name: '',
+            apiGroup: 'rbac.authorization.k8s.io',
+            kind: 'User',
+          },
+        },
+      ])
+    }
+  }, [isEditing, isViewing, selectedUsers.length])
+  
+  
+
   const { cancelForm } = useContext(LostChangesContext)
   const guardedHandleModalToggle = useCallback(() => cancelForm(handleModalToggle), [cancelForm, handleModalToggle])
 
   const stateToData = () => [{
     apiVersion: AccessControlApiVersion,
-    kind: accessControl?.kind,
+    kind: accessControl ? accessControl?.kind : 'ClusterPermission',
     metadata: {
       name,
       namespace,
     },
     spec: {
-      roleBindings: selectedUsers,
+      roleBindings: selectedUsers ? selectedUsers : [{namespace:"",roleRef:{name:"",apiGroup:"",kind:""},subject:{name:"",apiGroup:"",kind:""}}],
     },
     }];
 
@@ -76,6 +102,12 @@ const AccessControlManagementForm = (
  
   const title = isViewing ? accessControl?.metadata?.uid! : isEditing ? t('Edit access control') : t('Add access control')
   const breadcrumbs = [{ text: t('Access Controls'), to: NavigationPath.accessControlManagement }, { text: title }]
+
+  const namespaceOptions = (namespacesProp ?? managedClusters.map(c => c.name)).map(ns => ({
+    id: ns,
+    value: ns,
+    text: ns,
+  }))
   
   const formData: FormData = {
     title,
@@ -95,10 +127,11 @@ const AccessControlManagementForm = (
             onChange: (value) => {
               setNamespace(value)
             },
-            options: managedClusters.map(namespace => ({
-              id: namespace.name,
-              value: namespace.name,
-            })),
+            // options: managedClusters.map(namespace => ({
+            //   id: namespace.name,
+            //   value: namespace.name,
+            // })),
+            options: namespaceOptions,
             isRequired: true,
             isDisabled: false
           },
