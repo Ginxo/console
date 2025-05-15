@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom-v5-compat'
 import { AcmDataFormPage } from '../../components/AcmDataForm'
 import { FormData } from '../../components/AcmFormData'
@@ -16,6 +16,9 @@ import {
 } from '../../ui-components'
 import { useAllClusters } from '../Infrastructure/Clusters/ManagedClusters/components/useAllClusters'
 import schema from './schema.json'
+import { useSearchCompleteLazyQuery } from '../Search/search-sdk/search-sdk'
+import { searchClient } from '../Search/search-sdk/search-client'
+import { get } from 'lodash'
 
 const AccessControlManagementForm = (
   { isEditing, isViewing, handleModalToggle, hideYaml, accessControl }: {
@@ -37,10 +40,41 @@ const AccessControlManagementForm = (
   // Form Values
   const [cluster, setCluster] = useState('')
   const { submitForm } = useContext(LostChangesContext)
+  const [role, setRole] = useState('')
 
   useEffect(() => {
-    setCluster(accessControl?.data?.cluster ?? '')
-  }, [accessControl?.data])
+    setCluster(accessControl?.metadata?.namespace ?? '')
+    console.log("test")
+    console.log(accessControl?.metadata)
+  }, [accessControl?.metadata])
+
+  //react hook that updates namespaces, along with setNamespaces as a function to reset namespaces
+  const [namespaces, setNamespaces] = useState([])
+  const [getSearchResults, { data, loading, error, refetch }] = useSearchCompleteLazyQuery({
+    client: process.env.NODE_ENV === 'test' ? undefined : searchClient,
+  })
+  useEffect(() => {
+      getSearchResults({
+        client: process.env.NODE_ENV === 'test' ? undefined : searchClient,
+        variables: {
+          property: 'namespace',
+          query: {
+            keywords: [],
+            filters: [
+              {
+                property: 'cluster',
+                values: [cluster],
+              },
+            ],
+          },
+          limit: -1,
+        },
+      })
+  }, [cluster])
+
+  const namespaceItems: string[] = useMemo(() => get(data || [], 'searchComplete') ?? [], [data?.searchComplete])
+
+  console.log(namespaceItems)
 
   const { cancelForm } = useContext(LostChangesContext)
   const guardedHandleModalToggle = useCallback(() => cancelForm(handleModalToggle), [cancelForm, handleModalToggle])
@@ -66,8 +100,20 @@ const AccessControlManagementForm = (
     { path: 'AccessControl[0].data.cluster', setState: setCluster },
   ]
 
-  const title = isViewing ? accessControl?.data?.id! : isEditing ? t('Edit access control') : t('Add access control')
+  const title = isViewing ? accessControl?.metadata?.uid! : isEditing ? t('Edit access control') : t('Add access control')
   const breadcrumbs = [{ text: t('Access Controls'), to: NavigationPath.accessControlManagement }, { text: title }]
+
+  
+  // const [currentSearch] = useState<string>('')
+  // const searchbartest = <Searchbar
+  //             queryString={currentSearch}
+  //             saveSearchTooltip={''}
+  //             setSaveSearch={() => {}}
+  //             updateBrowserUrl={() => {}}
+  //             savedSearchQueries={[]}
+  //             inputPlaceholder={currentSearch === '' ? 'Filter VirtualMachines' : ''}
+  //             exportEnabled={false}
+  //           />
 
   const formData: FormData = {
     title,
@@ -82,7 +128,7 @@ const AccessControlManagementForm = (
           {
             id: 'cluster',
             type: 'Select',
-            label: t('Cluster'),
+            label: 'Managedcluster',
             value: cluster,
             onChange: setCluster,
             options: managedClusters.map(cluster => ({
@@ -92,6 +138,20 @@ const AccessControlManagementForm = (
             })),
             isRequired: true,
             isDisabled: false
+          },
+          {
+            id: 'name',
+            type: 'Select',
+            label: 'Namespaces of the managedcluster',
+            placeholder: 'name',
+            value: role,
+            onChange: setRole,
+            options: namespaceItems.map(namespace => ({
+              id: namespace,
+              value: namespace,
+              text: namespace,
+            })),
+            isRequired: true,
           },
         ],
       }
@@ -104,12 +164,12 @@ const AccessControlManagementForm = (
       if (isEditing) {
         const accessControl = accessControlData as AccessControl
         const patch: { op: 'replace'; path: string; value: unknown }[] = []
-        const data: AccessControl['data'] = { ...accessControl.data!, cluster } // TODO: the rest of fields
+        const data: AccessControl['metadata'] = { ...accessControl.metadata!, namespace } // TODO: the rest of fields
         patch.push({ op: 'replace', path: `/data`, value: data })
         return patchResource(accessControl, patch).promise.then(() => {
           toastContext.addAlert({
             title: t('Acccess Control updated'),
-            message: t('accessControlForm.updated.message', { id: data.id }),
+            message: t('accessControlForm.updated.message', { id: data?.uid }),
             type: 'success',
             autoClose: true,
           })
@@ -120,7 +180,7 @@ const AccessControlManagementForm = (
         return createResource(accessControlData as IResource).promise.then((resource) => {
           toastContext.addAlert({
             title: t('Access Control created'),
-            message: t('accessControlForm.created.message', { id: (resource as AccessControl).data?.id }),
+            message: t('accessControlForm.created.message', { id: (resource as AccessControl).metadata?.uid }),
             type: 'success',
             autoClose: true,
           })
@@ -162,7 +222,7 @@ const AccessControlManagementForm = (
       }
       edit={() => navigate(
         generatePath(NavigationPath.editAccessControlManagement, {
-          id: accessControl?.data?.id!,
+          id: accessControl?.metadata?.uid!,
         })
       )}
       isModalWizard={!!handleModalToggle}
