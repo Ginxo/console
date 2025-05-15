@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom-v5-compat'
 import { AcmDataFormPage } from '../../components/AcmDataForm'
 import { FormData } from '../../components/AcmFormData'
@@ -19,7 +19,9 @@ import { useAllClusters } from '../Infrastructure/Clusters/ManagedClusters/compo
 import schema from './schema.json'
 import { RoleBinding } from '../../resources/access-control'
 import { Stack, StackItem, Title } from '@patternfly/react-core'
-
+import { useSearchCompleteLazyQuery } from '../Search/search-sdk/search-sdk'
+import { searchClient } from '../Search/search-sdk/search-client'
+import { get } from 'lodash'
 
 const AccessControlManagementForm = (
   { isEditing, isViewing, handleModalToggle, hideYaml, accessControl, namespaces: namespacesProp,isCreatable }: {
@@ -98,6 +100,31 @@ const AccessControlManagementForm = (
     }
   }, [isEditing, isViewing, selectedUsers.length])
   
+  const [getSearchResults, { data, loading, error, refetch }] = useSearchCompleteLazyQuery({
+    client: process.env.NODE_ENV === 'test' ? undefined : searchClient,
+  })
+  useEffect(() => {
+      getSearchResults({
+        client: process.env.NODE_ENV === 'test' ? undefined : searchClient,
+        variables: {
+          property: 'namespace',
+          query: {
+            keywords: [],
+            filters: [
+              {
+                property: 'cluster',
+                values: [namespace],
+              },
+            ],
+          },
+          limit: -1,
+        },
+      })
+  }, [namespace])
+
+  const namespaceItems: string[] = useMemo(() => get(data || [], 'searchComplete') ?? [], [data?.searchComplete])
+
+  console.log(namespaceItems)
   
 
   const { cancelForm } = useContext(LostChangesContext)
@@ -209,7 +236,11 @@ const AccessControlManagementForm = (
             placeholder:'Select or enter namespace',
             value: selectedNamespaces,
             onChange: (values) => setSelectedNamespaces(values),
-            options: namespaceOptions,
+            options: namespaceItems.map(namespace => ({
+              id: namespace,
+              value: namespace,
+              text: namespace,
+            })),
             isRequired: true,
             isHidden: isViewing,
           },
