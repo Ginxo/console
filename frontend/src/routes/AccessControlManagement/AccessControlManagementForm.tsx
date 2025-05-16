@@ -40,8 +40,8 @@ const AccessControlManagementForm = (
   // Data
   const managedClusters = useAllClusters(true)
   const roles = [{id:"1", value:"kubevirt.io:view"},{id:"2", value:"kubevirt.io:edit"},{id:"1", value:"kubevirt.io:admin"}]
-  const allUsers = ['Bob', 'Matt', 'Kike', 'Kurtis', 'Oksana']
-  const allGroups = ['devs', 'admins', 'qa']
+  const usersArray = ['Bob', 'Matt', 'Kike', 'Kurtis', 'Oksana']
+  const groupsArray = ['devs', 'admins', 'qa']
 
   // Form Values
   const [namespace, setNamespace] = useState('')
@@ -53,6 +53,8 @@ const AccessControlManagementForm = (
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([])
   
+  const [allUsers, setAllUsers] = useState<string[]>(usersArray) 
+  const [allGroups, setAllGroups] = useState<string[]>(groupsArray) 
   const [subjectType, setSubjectType] = useState<'User' | 'Group'>('User')
 
 
@@ -144,7 +146,6 @@ const AccessControlManagementForm = (
     { path: 'AccessControl[0].spec.roleBindings', setState: setSelectedUsers },
   ]
   
- 
   const title = isViewing ? accessControl?.metadata?.uid! : isEditing ? t('Edit access control') : t('Add access control')
   const breadcrumbs = [{ text: t('Access Controls'), to: NavigationPath.accessControlManagement }, { text: title }]
 
@@ -154,6 +155,25 @@ const AccessControlManagementForm = (
     text: ns,
   }))
 
+  function handleCreatableMultiselectChange({
+    values,
+    setSelected,
+    currentList,
+    setList,
+  }: {
+    values: string[]
+    setSelected: (values: string[]) => void
+    currentList: string[]
+    setList: (list: string[]) => void
+  }) {
+    setSelected(values)
+  
+    const newValues = values.filter((val) => !currentList.includes(val))
+    if (newValues.length) {
+      setList([...currentList, ...newValues])
+    }
+  }
+  
   const formData: FormData = {
     title,
     description: t('An access control stores the... TO BE DEFINED'),
@@ -231,17 +251,24 @@ const AccessControlManagementForm = (
           },
           {
             id: 'subject',
-            type: 'Multiselect',
+            type: 'CreatableMultiselect',
             label: subjectType === 'Group' ? t('Groups') : t('Users'),
             placeholder: subjectType === 'Group'? t('Select or enter group name') : t('Select or enter user name'),
             value: selectedUserNames,
-            onChange: (values) => setSelectedUserNames(values),
+            onChange: (values) =>
+              handleCreatableMultiselectChange({
+                values,
+                setSelected: setSelectedUserNames,
+                currentList: subjectType === 'Group' ? allGroups : allUsers,
+                setList: subjectType === 'Group' ? setAllGroups : setAllUsers,
+              }),
             options: (subjectType === 'Group' ? allGroups : allUsers).map((val) => ({
               id: val,
               value: val,
             })),
             isRequired: true,
             isHidden: isViewing,
+            isCreatable: true,
           },
           {
             id: 'roles',
