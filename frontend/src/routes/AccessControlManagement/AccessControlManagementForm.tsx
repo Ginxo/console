@@ -231,7 +231,7 @@ const AccessControlManagementForm = (
           },
           {
             id: 'subject',
-            type: 'Multiselect',
+            type: 'CreatableMultiselect',
             label: subjectType === 'Group' ? t('Groups') : t('Users'),
             placeholder: subjectType === 'Group'? t('Select or enter group name') : t('Select or enter user name'),
             value: selectedUserNames,
@@ -242,6 +242,7 @@ const AccessControlManagementForm = (
             })),
             isRequired: true,
             isHidden: isViewing,
+            isCreatable: true,
           },
           {
             id: 'roles',
