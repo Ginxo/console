@@ -1,21 +1,21 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { Stack, StackItem, Title } from '@patternfly/react-core'
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom-v5-compat'
 import { AcmDataFormPage } from '../../components/AcmDataForm'
 import { FormData } from '../../components/AcmFormData'
 import { LostChangesContext } from '../../components/LostChanges'
 import { useTranslation } from '../../lib/acm-i18next'
-import { useQuery } from '../../lib/useQuery'
 import { NavigationPath, useBackCancelNavigation } from '../../NavigationPath'
 import { IResource, listGroups, listUsers } from '../../resources'
 import { AccessControl, AccessControlApiVersion, RoleBinding } from '../../resources/access-control'
 import { createResource, patchResource } from '../../resources/utils'
-import { AcmLabels, AcmToastContext } from '../../ui-components'
+import { AcmToastContext } from '../../ui-components'
 import { useAllClusters } from '../Infrastructure/Clusters/ManagedClusters/components/useAllClusters'
-import { searchClient } from '../Search/search-sdk/search-client'
 import { useSearchCompleteLazyQuery } from '../Search/search-sdk/search-sdk'
+import { searchClient } from '../Search/search-sdk/search-client'
+import { useQuery } from '../../lib/useQuery'
 import schema from './schema.json'
+import { RoleBindingSection } from './RoleBindingSection'
 
 const AccessControlManagementForm = ({
   isEditing,
@@ -58,35 +58,54 @@ const AccessControlManagementForm = ({
     }
   }, [groupsStartPolling, groupsStopPolling, usersStartPolling, usersStopPolling])
 
-  // Form Values
   const [namespace, setNamespace] = useState('')
   const [createdDate, setCreatedDate] = useState('')
-  const [selectedUsers, setSelectedUsers] = useState<RoleBinding[]>([])
   const [name, setName] = useState('')
 
-  const [selectedUserNames, setSelectedUserNames] = useState<string[]>([])
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([])
-  const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([])
-  const [subjectType, setSubjectType] = useState<'User' | 'Group'>('User')
+  // RoleBinding states
+  const [selectedRoleBindings, setSelectedRoleBindings] = useState<RoleBinding[]>([])
+  const [rbSelectedUserGroups, setRbSelectedUserGroups] = useState<string[]>([])
+  const [rbSelectedRoles, setRbSelectedRoles] = useState<string[]>([])
+  const [rbSelectedNamespaces, setRbSelectedNamespaces] = useState<string[]>([])
+  const [rbSubjectType, setRbSubjectType] = useState<'User' | 'Group'>('User')
+
+  // ClusterRoleBinding states
+  const [crbSelectedUserGroup, setCrbSelectedUserGroup] = useState<string>('')
+  const [crbSelectedRole, setCrbSelectedRole] = useState<string>('')
+  const [crbSelectedNamespace, setCrbSelectedNamespace] = useState<string>('')
+  const [crbSubjectType, setCrbSubjectType] = useState<'User' | 'Group'>('User')
 
   const { submitForm } = useContext(LostChangesContext)
 
   useEffect(() => {
+    setName(accessControl?.metadata?.name ?? '')
     setNamespace(accessControl?.metadata?.namespace ?? '')
     setCreatedDate(accessControl?.metadata?.creationTimestamp ?? '')
-    setSelectedUsers((accessControl?.spec?.roleBindings ?? []) as RoleBinding[])
-    setName(accessControl?.metadata?.name ?? '')
+    setSelectedRoleBindings((accessControl?.spec?.roleBindings ?? []) as RoleBinding[])
 
     if (accessControl?.spec?.roleBindings) {
-      setSelectedUserNames([...new Set(accessControl.spec.roleBindings.map((rb) => rb.subject.name))])
-      setSelectedRoles([...new Set(accessControl.spec.roleBindings.map((rb) => rb.roleRef.name))])
-      setSelectedNamespaces([...new Set(accessControl.spec.roleBindings.map((rb) => rb.namespace))])
+      setRbSelectedUserGroups([
+        ...new Set(
+          accessControl.spec.roleBindings
+            .map((rb) => rb.subject?.name)
+            .filter((name): name is string => name !== undefined)
+        ),
+      ])
+      setRbSelectedRoles([...new Set(accessControl.spec.roleBindings.map((rb) => rb.roleRef.name))])
+      setRbSelectedNamespaces([...new Set(accessControl.spec.roleBindings.map((rb) => rb.namespace))])
     }
-  }, [accessControl?.metadata, accessControl?.spec.roleBindings])
+
+    if (accessControl?.spec?.clusterRoleBinding) {
+      setCrbSelectedUserGroup(accessControl.spec.clusterRoleBinding.subject?.name ?? '')
+      setCrbSelectedRole(accessControl.spec.clusterRoleBinding.roleRef?.name ?? '')
+      setCrbSelectedNamespace('All Namespaces')
+      setCrbSubjectType(accessControl.spec.clusterRoleBinding.subjects?.[0]?.kind === 'Group' ? 'Group' : 'User')
+    }
+  }, [accessControl?.metadata, accessControl?.spec.clusterRoleBinding, accessControl?.spec.roleBindings])
 
   useEffect(() => {
-    if (!isEditing && !isViewing && selectedUsers.length === 0) {
-      setSelectedUsers([
+    if (!isEditing && !isViewing && selectedRoleBindings.length === 0) {
+      setSelectedRoleBindings([
         {
           namespace,
           roleRef: {
@@ -102,7 +121,7 @@ const AccessControlManagementForm = ({
         },
       ])
     }
-  }, [isEditing, isViewing, namespace, selectedUsers.length])
+  }, [isEditing, isViewing, namespace, selectedRoleBindings.length])
 
   const [getSearchResults, { data }] = useSearchCompleteLazyQuery({
     client: process.env.NODE_ENV === 'test' ? undefined : searchClient,
@@ -135,9 +154,9 @@ const AccessControlManagementForm = ({
   const guardedHandleModalToggle = useCallback(() => cancelForm(handleModalToggle), [cancelForm, handleModalToggle])
 
   const stateToData = () => {
-    const roleBindings = selectedNamespaces.flatMap((ns) =>
-      selectedUserNames.flatMap((user) =>
-        selectedRoles.map((role) => ({
+    const roleBindings = rbSelectedNamespaces.flatMap((ns) =>
+      rbSelectedUserGroups.flatMap((user) =>
+        rbSelectedRoles.map((role) => ({
           namespace: ns,
           roleRef: {
             name: role,
@@ -147,11 +166,30 @@ const AccessControlManagementForm = ({
           subject: {
             name: user,
             apiGroup: 'rbac.authorization.k8s.io',
-            kind: subjectType,
+            kind: rbSubjectType,
           },
         }))
       )
     )
+
+    const clusterRoleBinding =
+      crbSelectedUserGroup && crbSelectedRole
+        ? {
+            ...(accessControl?.spec.clusterRoleBinding?.name && {
+              name: accessControl.spec.clusterRoleBinding.name,
+            }),
+            roleRef: {
+              name: crbSelectedRole,
+              apiGroup: 'rbac.authorization.k8s.io',
+              kind: 'ClusterRole',
+            },
+            subject: {
+              name: crbSelectedUserGroup,
+              apiGroup: 'rbac.authorization.k8s.io',
+              kind: crbSubjectType,
+            },
+          }
+        : undefined
 
     return [
       {
@@ -163,6 +201,7 @@ const AccessControlManagementForm = ({
         },
         spec: {
           roleBindings,
+          clusterRoleBinding,
         },
       },
     ]
@@ -171,7 +210,7 @@ const AccessControlManagementForm = ({
   const stateToSyncs = () => [
     { path: 'AccessControl[0].metadata.namespace', setState: setNamespace },
     { path: 'AccessControl[0].metadata.name', setState: setName },
-    { path: 'AccessControl[0].spec.roleBindings', setState: setSelectedUsers },
+    { path: 'AccessControl[0].spec.roleBindings', setState: setSelectedRoleBindings },
   ]
 
   const title = isViewing
@@ -230,91 +269,56 @@ const AccessControlManagementForm = ({
           },
         ],
       },
-      {
-        type: 'Section',
-        title: t('Role Bindings'),
-        wizardTitle: t('Role Bindings'),
-        inputs: [
-          {
-            id: 'namespaces',
-            type: 'Multiselect',
-            label: t('Namespaces'),
-            placeholder: 'Select or enter namespace',
-            value: selectedNamespaces,
-            onChange: (values) => setSelectedNamespaces(values),
-            options: namespaceItems.map((namespace) => ({
-              id: namespace,
-              value: namespace,
-              text: namespace,
-            })),
-            isRequired: true,
-            isHidden: isViewing,
-          },
-          {
-            id: 'selectionType',
-            type: 'Radio',
-            label: '',
-            value: subjectType.toLowerCase(),
-            onChange: (value: string) => {
-              setSelectedUserNames([])
-              setSubjectType(value === 'group' ? 'Group' : 'User')
-            },
-            options: [
-              { id: 'user', value: 'user', text: t('User') },
-              { id: 'group', value: 'group', text: t('Group') },
-            ],
-            isRequired: true,
-            isHidden: isViewing,
-          },
-          {
-            id: 'subject',
-            type: 'CreatableMultiselect',
-            label: subjectType === 'Group' ? t('Groups') : t('Users'),
-            placeholder: subjectType === 'Group' ? t('Select or enter group name') : t('Select or enter user name'),
-            value: selectedUserNames,
-            onChange: (values) => setSelectedUserNames(values),
-            options: ((subjectType === 'Group' ? groups : users) || []).map((val) => ({
-              id: val.metadata.uid!,
-              value: val.metadata.name!,
-            })),
-            isRequired: true,
-            isHidden: isViewing,
-            isCreatable: true,
-          },
-          {
-            id: 'roles',
-            type: 'Multiselect',
-            label: t('Roles'),
-            placeholder: 'Select or enter roles',
-            value: selectedRoles,
-            onChange: (values) => setSelectedRoles(values),
-            options: roles.map((r) => ({ id: r.id, value: r.value })),
-            isRequired: true,
-            isHidden: isViewing,
-          },
-          {
-            id: 'custom-labels',
-            type: 'Custom',
-            isHidden: !isViewing,
-            component: (
-              <Stack hasGutter>
-                <StackItem>
-                  <Title headingLevel="h6">{t('Namespaces')}</Title>
-                  <AcmLabels isVertical={false} labels={selectedNamespaces} />
-                </StackItem>
-                <StackItem>
-                  <Title headingLevel="h6">{t('Users')}</Title>
-                  <AcmLabels isVertical={false} labels={selectedUserNames} />
-                </StackItem>
-                <StackItem>
-                  <Title headingLevel="h6">{t('Roles')}</Title>
-                  <AcmLabels isVertical={false} labels={selectedRoles} />
-                </StackItem>
-              </Stack>
-            ),
-          },
-        ],
-      },
+      RoleBindingSection({
+        title: 'Role Bindings',
+        idPrefix: 'rb',
+        isViewing,
+        isRequired: !crbSelectedRole && !crbSelectedUserGroup,
+        selectedNamespaces: rbSelectedNamespaces,
+        selectedUserGroups: rbSelectedUserGroups,
+        selectedRoles: rbSelectedRoles,
+        subjectType: rbSubjectType,
+        namespaceOptions: namespaceItems.map((namespace) => ({
+          id: namespace,
+          value: namespace,
+          text: namespace,
+        })),
+        roleOptions: roles.map((r) => ({ id: r.id, value: r.value })),
+        userGroupOptions: ((rbSubjectType === 'Group' ? groups : users) || []).map((val) => ({
+          id: val.metadata.uid!,
+          value: val.metadata.name!,
+        })),
+        onNamespaceChange: (values) => setRbSelectedNamespaces(values),
+        onSubjectTypeChange: (value: string) => {
+          setRbSelectedUserGroups([])
+          setRbSubjectType(value === 'group' ? 'Group' : 'User')
+        },
+        onUserGroupChange: (values) => setRbSelectedUserGroups(values),
+        onRoleChange: (values) => setRbSelectedRoles(values),
+      }),
+      RoleBindingSection({
+        title: 'Cluster Role Binding',
+        idPrefix: 'crb',
+        isViewing,
+        isRequired: !rbSelectedUserGroups.length && !rbSelectedRoles.length,
+        selectedNamespaces: crbSelectedNamespace ? [crbSelectedNamespace] : [],
+        selectedUserGroups: crbSelectedUserGroup ? [crbSelectedUserGroup] : [],
+        selectedRoles: crbSelectedRole ? [crbSelectedRole] : [],
+        subjectType: crbSubjectType,
+        namespaceOptions: [{ id: 'all', value: 'All Namespaces', text: 'All Namespaces' }],
+        roleOptions: roles.map((r) => ({ id: r.id, value: r.value })),
+        userGroupOptions: ((crbSubjectType === 'Group' ? groups : users) || []).map((val) => ({
+          id: val.metadata.uid!,
+          value: val.metadata.name!,
+        })),
+        onNamespaceChange: (values) => setCrbSelectedNamespace(values[0] || ''),
+        onSubjectTypeChange: (value: string) => {
+          setCrbSelectedUserGroup('')
+          setCrbSubjectType(value === 'group' ? 'Group' : 'User')
+        },
+        onUserGroupChange: (values) => setCrbSelectedUserGroup(values[0] || ''),
+        onRoleChange: (values) => setCrbSelectedRole(values[0] || ''),
+      }),
     ],
     submit: () => {
       let accessControlData = formData?.customData ?? stateToData()
