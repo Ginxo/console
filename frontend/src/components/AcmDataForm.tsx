@@ -1055,7 +1055,8 @@ export function AcmDataFormInput(props: { input: Input; validated?: 'error'; isR
     case 'Select':
     case 'GroupedSelect':
     case 'Multiselect':
-    case 'GroupedMultiselect': {
+    case 'GroupedMultiselect': 
+    case 'CreatableMultiselect':{
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { onChange, placeholder, validate, validation, isRequired, ...inputProps } = input
       const onSelect = (_event: unknown, selection: string | SelectOptionObject) => {
@@ -1066,6 +1067,7 @@ export function AcmDataFormInput(props: { input: Input; validated?: 'error'; isR
             break
           case 'Multiselect':
           case 'GroupedMultiselect':
+          case 'CreatableMultiselect':
             if (!input.value.includes(selection as string)) {
               input.onChange([...input.value, ...[selection as string]])
             } else {
@@ -1158,6 +1160,7 @@ export function AcmDataFormInput(props: { input: Input; validated?: 'error'; isR
             break
           case 'Multiselect':
           case 'GroupedMultiselect':
+          case 'CreatableMultiselect':
             variant = 'typeaheadmulti'
             break
         }
@@ -1169,7 +1172,7 @@ export function AcmDataFormInput(props: { input: Input; validated?: 'error'; isR
           selections={selections}
           onSelect={onSelect}
           onClear={onClear}
-          isCreatable={false}
+          isCreatable={input.type === 'CreatableMultiselect'}
           isDisabled={isReadOnly || input.isDisabled}
           validated={validated}
           autoClose={input.type === 'Select' || input.type === 'GroupedSelect'}
@@ -1177,7 +1180,7 @@ export function AcmDataFormInput(props: { input: Input; validated?: 'error'; isR
           variant={variant}
           placeholderText={input.placeholder}
         >
-          {input.type === 'Select' || input.type === 'Multiselect'
+          {input.type === 'Select' || input.type === 'Multiselect' || input.type === 'CreatableMultiselect'
             ? input.options.map((option) => {
                 return (
                   <SelectOption key={option.value} value={option.value} description={option.description}>
