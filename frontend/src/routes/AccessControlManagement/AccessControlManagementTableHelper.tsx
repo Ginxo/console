@@ -10,9 +10,19 @@ import AcmTimestamp from '../../lib/AcmTimestamp'
 import { rbacDelete, rbacGet, rbacPatch } from '../../lib/rbac-util'
 import { NavigationPath } from '../../NavigationPath'
 import { AccessControl } from '../../resources/access-control'
-import { Cluster, createDownloadFile, deleteResource, getISOStringTimestamp } from '../../resources/utils'
+import {
+  Cluster,
+  createDownloadFile,
+  deleteResource,
+  filterLabelFn,
+  getISOStringTimestamp,
+} from '../../resources/utils'
 import { AcmLabels, compareStrings } from '../../ui-components'
 import { useRecoilValue, useSharedAtoms } from '../../shared-recoil'
+import {
+  getClusterLabelData,
+  getClusterPermissionLabelData,
+} from '../Infrastructure/Clusters/ManagedClusters/utils/utils'
 
 const LABELS_LENGTH = 5
 const EXPORT_FILE_PREFIX = 'access-control-management'
@@ -250,6 +260,30 @@ const accessControlTableColumns = ({ t, setModalProps, navigate }: AccessControl
   },
 ]
 
+const useLabels = ({
+  managedClusters,
+  accessControls,
+  t,
+}: {
+  managedClusters: Cluster[]
+  accessControls: AccessControl[] | undefined
+  t: TFunction
+}) => {
+  const { labelOptions, labelMap } = getClusterPermissionLabelData(accessControls || []) || {}
+  return useMemo(
+    () => [
+      {
+        id: 'label',
+        label: t('table.labels'),
+        options: labelOptions || [],
+        supportsInequality: true,
+        tableFilterFn: (selectedValues: string[], item: AccessControl) => filterLabelFn(selectedValues, item, labelMap),
+      },
+    ],
+    [t, managedClusters, accessControls]
+  )
+}
+
 const useFilters = ({
   managedClusters,
   accessControls,
@@ -259,8 +293,16 @@ const useFilters = ({
   accessControls: AccessControl[] | undefined
   t: TFunction
 }) => {
+  const { labelOptions, labelMap } = getClusterPermissionLabelData(accessControls || []) || {}
   return useMemo(
     () => [
+      {
+        id: 'label',
+        label: t('table.labels'),
+        options: labelOptions || [],
+        supportsInequality: true,
+        tableFilterFn: (selectedValues: string[], item: AccessControl) => filterLabelFn(selectedValues, item, labelMap),
+      },
       {
         id: 'cluster',
         label: t('Cluster'),
@@ -344,7 +386,7 @@ const useFilters = ({
   )
 }
 
-export { accessControlTableColumns, ACTIONS, COLUMN_CELLS, EXPORT_FILE_PREFIX, useFilters }
+export { accessControlTableColumns, ACTIONS, COLUMN_CELLS, EXPORT_FILE_PREFIX, useFilters, useLabels }
 
 export function useAccessControlFilter() {
   const { accessControlState } = useSharedAtoms()

@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import { AccessControl } from '../../../../../resources/access-control'
 import { Cluster } from '../../../../../resources/utils'
 
 export const onToggle = (acmCardID: string, open: boolean, setOpen: (open: boolean) => void) => {
@@ -31,6 +32,34 @@ export function getClusterLabelData(clusters: Cluster[]) {
     })
 
     labelMap[cluster.uid] = { pairs, labels: labelStrings }
+  })
+  return {
+    labelMap,
+    labelOptions: Array.from(allLabels).map((lbl) => {
+      return { label: lbl, value: lbl }
+    }),
+  }
+}
+
+export function getClusterPermissionLabelData(accessControls: AccessControl[]) {
+  const allLabels = new Set<string>()
+  const labelMap: Record<string, { pairs: Record<string, string>; labels: string[] }> = {}
+  accessControls?.forEach((accessControls) => {
+    const labelsArray = Object.entries(accessControls.metadata?.labels || {}) || []
+    const labelStrings: string[] = []
+    const pairs: Record<string, string> = {}
+    labelsArray.forEach(([key, value]) => {
+      const stringLabel = `${key}=${value}`
+      labelStrings.push(stringLabel)
+      if (
+        !key.startsWith('rbac.open-cluster-management.io/*')
+      ) {
+        pairs[key] = value
+        allLabels.add(stringLabel)
+      }
+    })
+
+    labelMap[accessControls.metadata?.uid!] = { pairs, labels: labelStrings }
   })
   return {
     labelMap,

@@ -16,6 +16,7 @@ import {
   ACTIONS,
   EXPORT_FILE_PREFIX,
   useFilters,
+  useLabels,
 } from './AccessControlManagementTableHelper'
 
 const AccessControlManagementTable = (props: {
@@ -31,6 +32,7 @@ const AccessControlManagementTable = (props: {
   const canAddAccessControl = useIsAnyNamespaceAuthorized(rbacCreate(AccessControlDefinition))
   const managedClusters = useAllClusters(true)
   const filters = useFilters({ managedClusters, accessControls: props.accessControls, t })
+  const labels = useLabels({ managedClusters, accessControls: props.accessControls, t })
 
   return (
     <Fragment>
@@ -64,6 +66,7 @@ const AccessControlManagementTable = (props: {
         }
         items={props.accessControls}
         filters={filters}
+        //advancedFilters={labels}
         columns={accessControlTableColumns({ t, setModalProps, navigate })}
         keyFn={(accessControl) => accessControl.metadata?.uid as string}
         tableActionButtons={[
