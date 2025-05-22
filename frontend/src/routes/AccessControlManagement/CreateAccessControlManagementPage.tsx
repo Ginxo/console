@@ -6,7 +6,7 @@ import { LoadingPage } from '../../components/LoadingPage'
 import { useProjects } from '../../hooks/useProjects'
 import { useTranslation } from '../../lib/acm-i18next'
 import { NavigationPath } from '../../NavigationPath'
-import { AcmEmptyState, AcmPage, AcmPageHeader, Provider } from '../../ui-components'
+import { AcmEmptyState, AcmPage, AcmPageHeader } from '../../ui-components'
 import { AccessControlManagementForm } from './AccessControlManagementForm'
 
 const CreateAccessControlManagementPage = () => {
@@ -42,15 +42,7 @@ const CreateAccessControlManagementPage = () => {
           </AcmPage>
         )
       default:
-        return (
-          <AccessControlManagementForm
-            isCreatable={true}
-            namespaces={projects}
-            isEditing={false}
-            isViewing={false}
-            credentialsType={Provider.ansible}
-          />
-        )
+        return <AccessControlManagementForm isCreatable={true} isEditing={false} isViewing={false} />
     }
   })()
 }
