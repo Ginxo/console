@@ -25,7 +25,6 @@ const AccessControlManagementForm = ({
   handleModalToggle,
   hideYaml,
   accessControl,
-  namespaces: namespacesProp,
   isCreatable,
 }: {
   isEditing: boolean
@@ -34,7 +33,6 @@ const AccessControlManagementForm = ({
   handleModalToggle?: () => void
   hideYaml?: boolean
   accessControl?: AccessControl
-  namespaces?: string[]
 }) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -243,10 +241,9 @@ const AccessControlManagementForm = ({
       : t('Add access control')
   const breadcrumbs = [{ text: t('Access Controls'), to: NavigationPath.accessControlManagement }, { text: title }]
 
-  const namespaceOptions = (namespacesProp ?? managedClusters.map((c) => c.name)).map((ns) => ({
-    id: ns,
-    value: ns,
-    text: ns,
+  const clusters = managedClusters.map((c) => ({
+    id: c.name,
+    value: c.name,
   }))
 
   const formData: FormData = {
@@ -268,7 +265,7 @@ const AccessControlManagementForm = ({
             onChange: (value) => {
               setNamespace(value)
             },
-            options: namespaceOptions,
+            options: clusters,
             isRequired: true,
           },
           {

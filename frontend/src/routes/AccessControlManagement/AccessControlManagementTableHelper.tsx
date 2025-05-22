@@ -321,17 +321,18 @@ const useFilters = ({
             accessControls?.flatMap(
               (accessControl) =>
                 accessControl.spec.roleBindings
-                  ?.filter((e) => e.subject?.kind === 'User')
+                  ?.filter((e) => e.subject?.kind === 'User' && e.subject?.name)
                   .map((e) => e.subject?.name) ?? []
             )
           ),
         ]
+          .filter((name): name is string => name !== undefined)
           .map((e) => ({ label: e, value: e }))
           .sort((lhs, rhs) => compareStrings(lhs.label, rhs.label)),
         tableFilterFn: (selectedValues: string[], item: AccessControl) =>
           selectedValues.some((e) =>
             item.spec.roleBindings
-              ?.filter((e) => e.subject?.kind === 'User')
+              ?.filter((e) => e.subject?.kind === 'User' && e.subject?.name)
               .map((e) => e.subject?.name)
               .includes(e)
           ),
@@ -344,17 +345,18 @@ const useFilters = ({
             accessControls?.flatMap(
               (accessControl) =>
                 accessControl.spec.roleBindings
-                  ?.filter((e) => e.subject?.kind === 'User')
+                  ?.filter((e) => e.subject?.kind === 'User' && e.subject?.name)
                   .map((e) => e.subject?.name) ?? []
             )
           ),
         ]
+          .filter((name): name is string => name !== undefined)
           .map((e) => ({ label: e, value: e }))
           .sort((lhs, rhs) => compareStrings(lhs.label, rhs.label)),
         tableFilterFn: (selectedValues: string[], item: AccessControl) =>
           selectedValues.some((e) =>
             item.spec.roleBindings
-              ?.filter((e) => e.subject?.kind === 'User')
+              ?.filter((e) => e.subject?.kind === 'User' && e.subject?.name)
               .map((e) => e.subject?.name)
               .includes(e)
           ),
@@ -366,17 +368,19 @@ const useFilters = ({
           ...new Set(
             accessControls?.flatMap(
               (accessControl) =>
-                accessControl.spec.roleBindings?.filter((e) => e.roleRef.kind === 'Role').map((e) => e.subject?.name) ??
-                []
+                accessControl.spec.roleBindings
+                  ?.filter((e) => e.roleRef.kind === 'Role' && e.subject?.name)
+                  .map((e) => e.subject?.name) ?? []
             )
           ),
         ]
+          .filter((name): name is string => name !== undefined)
           .map((e) => ({ label: e, value: e }))
           .sort((lhs, rhs) => compareStrings(lhs.label, rhs.label)),
         tableFilterFn: (selectedValues: string[], item: AccessControl) =>
           selectedValues.some((e) =>
             item.spec.roleBindings
-              ?.filter((e) => e.roleRef.kind === 'Role')
+              ?.filter((e) => e.roleRef.kind === 'Role' && e.subject?.name)
               .map((e) => e.subject?.name)
               .includes(e)
           ),
