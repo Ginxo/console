@@ -89,14 +89,14 @@ const ACTIONS = {
 }
 
 const COLUMN_CELLS = {
-  ID: (accessControl: AccessControl) => (
+  NAME: (accessControl: AccessControl) => (
     <span style={{ whiteSpace: 'nowrap' }}>
       <Link
         to={generatePath(NavigationPath.viewAccessControlManagement, {
           id: accessControl.metadata?.uid!,
         })}
       >
-        {accessControl.metadata?.uid}
+        {accessControl.metadata?.name}
       </Link>
     </span>
   ),
@@ -209,10 +209,10 @@ const COLUMN_CELLS = {
 
 const accessControlTableColumns = ({ t, setModalProps, navigate }: AccessControlManagementTableHelperProps) => [
   {
-    header: t('ID'),
-    sort: 'metadata.uid',
-    search: 'metadata.uid',
-    cell: COLUMN_CELLS.ID,
+    header: t('Name'),
+    sort: 'metadata.name',
+    search: 'metadata.name',
+    cell: COLUMN_CELLS.NAME,
     exportContent: (accessControl: AccessControl) => accessControl.metadata?.uid!,
   },
   {

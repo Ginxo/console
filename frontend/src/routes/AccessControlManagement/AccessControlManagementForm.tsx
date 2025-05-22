@@ -192,7 +192,7 @@ const AccessControlManagementForm = ({
   ]
 
   const title = isViewing
-    ? accessControl?.metadata?.uid!
+    ? accessControl?.metadata?.name!
     : isEditing
       ? t('Edit access control')
       : t('Add access control')
@@ -214,6 +214,13 @@ const AccessControlManagementForm = ({
         title: t('Basic information'),
         wizardTitle: t('Basic information'),
         inputs: [
+          {
+            id: 'id',
+            type: 'Custom',
+            isHidden: !isViewing,
+            label: t('ID'),
+            component: <span>{accessControl?.metadata?.uid}</span>,
+          },
           {
             id: 'namespace',
             type: 'Select',
