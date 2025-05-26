@@ -187,14 +187,7 @@ const AccessControlManagementForm = ({
         path: `${pathPrefix}[0].spec.roleBindings`,
         setState: (roleBindings: RoleBinding[]) => {
           setSelectedRoleBindings(roleBindings?.length ? roleBindings : [])
-          switch (roleBindings?.[0]?.subject?.kind) {
-            case 'Group':
-              setSubjectType('Group')
-              break
-            case 'User':
-              setSubjectType('User')
-              break
-          }
+          setSubjectType(roleBindings?.[0]?.subject?.kind ?? subjectType)
         },
       },
     ]
