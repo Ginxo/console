@@ -113,9 +113,11 @@ const COLUMN_CELLS = {
   USER_GROUP: (accessControl: AccessControl, t: TFunction) => {
     // TODO: translate kind
     const rollBindingsSubjectNames =
-      accessControl.spec.roleBindings
-        ?.filter((e) => e.subject?.kind && e.subject?.name)
-        .map((e) => `${e.subject?.kind}: ${e.subject?.name}`) ?? []
+      accessControl.spec.roleBindings?.flatMap((rb) =>
+        rb.subject
+          ? [`${rb.subject.kind}: ${rb.subject.name}`]
+          : (rb.subjects?.map((s) => `${s.kind}: ${s.name}`) ?? [])
+      ) ?? []
 
     const clusterRollBindingSubjectName =
       accessControl.spec.clusterRoleBinding?.subject?.kind && accessControl.spec.clusterRoleBinding?.subject?.name
