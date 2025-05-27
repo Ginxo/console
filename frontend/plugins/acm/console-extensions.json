@@ -99,5 +99,22 @@
             "path": "/multicloud/governance",
             "component": { "$codeRef": "governance.default" }
         }
+    },
+    {
+      "type": "console.navigation/href",
+      "properties": {
+        "perspective": "acm",
+        "id": "acm-accessControlManagement",
+        "name": "%plugin__acm~AccessControlManagement%",
+        "href": "/multicloud/access-control-management",
+        "insertBefore": "mce-credentials"
+      }
+    },
+    {
+      "type": "console.page/route",
+      "properties": {
+        "path": "/multicloud/access-control-management",
+        "component": { "$codeRef": "accessControlManagement.default" }
+      }
     }
 ]
