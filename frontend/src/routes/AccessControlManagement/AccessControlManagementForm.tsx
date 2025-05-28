@@ -386,7 +386,7 @@ const AccessControlManagementForm = ({
       }),
     ].filter(Boolean) as Section[],
 
-    submit: () => {
+    submit: async () => {
       if (!isRBValid && !isCRBValid) {
         toastContext.addAlert({
           title: t('Validation error'),
