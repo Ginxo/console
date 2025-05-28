@@ -101,16 +101,22 @@
         }
     },
     {
+      "type": "console.flag/hookProvider",
+      "properties": {
+        "handler": { "$codeRef": "consoleFlags.useEnableAccessControlManagementMenuFlag" }
+      }
+    },
+    {
       "type": "console.navigation/href",
       "properties": {
         "perspective": "acm",
         "id": "acm-accessControlManagement",
         "name": "%plugin__acm~AccessControlManagement%",
         "href": "/multicloud/access-control-management",
-        "insertAfter": "mce-credentials",
-        "flags": {
-            "required": ["ACCESS_CONTROL_MANAGEMENT_FLAG"]
-        }
+        "insertAfter": "mce-credentials"
+      },
+      "flags": {
+        "required": ["ACCESS_CONTROL_MANAGEMENT"]
       }
     },
     {
@@ -118,12 +124,6 @@
       "properties": {
         "path": "/multicloud/access-control-management",
         "component": { "$codeRef": "accessControlManagement.default" }
-      }
-    },
-    {
-      "type": "console.flag/hookProvider",
-      "properties": {
-        "handler": { "$codeRef": "consoleFlags.useEnableAccessControlManagementMenuFlag" }
       }
     }
 ]
