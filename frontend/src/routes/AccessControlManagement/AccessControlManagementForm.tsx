@@ -187,9 +187,7 @@ const AccessControlManagementForm = ({
   const isCRBValid = !!selectedRoleNameCRB && selectedSubjectNamesCRB.length > 0
 
   const stateToData = () => {
-    const spec: any = {}
-    if (isRBValid) {
-      spec.roleBindings = selectedNamespacesRB.flatMap((ns) =>
+    const spec: any = isRBValid ? { roleBindings: selectedNamespacesRB.flatMap((ns) =>
         selectedRoleNamesRB.map((role) => ({
           namespace: ns,
           roleRef: {
@@ -203,7 +201,7 @@ const AccessControlManagementForm = ({
             kind: selectedSubjectTypeRB,
           })),
         }))
-      )
+      )} : {}
     }
 
     if (isCRBValid) {
