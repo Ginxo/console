@@ -107,7 +107,10 @@
         "id": "acm-accessControlManagement",
         "name": "%plugin__acm~AccessControlManagement%",
         "href": "/multicloud/access-control-management",
-        "insertBefore": "mce-credentials"
+        "insertAfter": "mce-credentials",
+        "flags": {
+            "required": ["ACCESS_CONTROL_MANAGEMENT_FLAG"]
+        }
       }
     },
     {
