@@ -119,5 +119,11 @@
         "path": "/multicloud/access-control-management",
         "component": { "$codeRef": "accessControlManagement.default" }
       }
+    },
+    {
+      "type": "console.flag/hookProvider",
+      "properties": {
+        "handler": { "$codeRef": "consoleFlags.useEnableAccessControlManagementMenuFlag" }
+      }
     }
 ]
