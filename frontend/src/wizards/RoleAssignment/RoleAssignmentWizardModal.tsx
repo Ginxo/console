@@ -13,12 +13,14 @@ import { RoleSelectionStepContent } from './RoleSelectionStepContent'
 import { ClusterSetAccessLevel } from './Scope/AccessLevel/ClusterSetAccessLevel'
 import { WizSelect } from '@patternfly-labs/react-form-wizard/lib/src/inputs/WizSelect'
 import { ClusterList } from './Scope/Clusters/ClusterList'
-import { ProjectsList } from './ProjectsList'
+import { ClusterGranularityWizardStep } from './ClusterGranularityWizardStep'
 import { ReviewStepContent } from './ReviewStepContent'
 import { IdentitiesList } from './Identities/IdentitiesList'
 import { UserKind, GroupKind } from '../../resources'
 import { useEffect } from 'react'
 import { isType } from '../../lib/is-type'
+import { Link } from 'react-router-dom-v5-compat'
+import { DOC_LINKS } from '../../lib/doc-util'
 
 const getInitialFormData = (): RoleAssignmentWizardFormData => ({
   subject: { kind: UserKind },
@@ -210,15 +212,16 @@ export const RoleAssignmentWizardModal = ({
           required
           options={[
             {
-              label: 'Cluster set role assignment',
+              label: t('Cluster set role assignment'),
               value: 'Cluster set role assignment',
-              description: 'Grant access to all current and future resources on the cluster set',
+              description: t('Grant access to all current and future resources on the cluster set'),
             },
             {
-              label: 'Cluster role assignment',
+              label: t('Cluster role assignment'),
               value: 'Cluster role assignment',
-              description:
-                'Grant access to specific clusters on the cluster set. Optionally, narrow this access to projects on the selected clusters',
+              description: t(
+                'Grant access to specific clusters on the cluster set. Optionally, narrow this access to projects on the selected clusters'
+              ),
             },
           ]}
         />
@@ -234,82 +237,29 @@ export const RoleAssignmentWizardModal = ({
           />
         </div>
       )}
-      {formData.clusterSetAccessLevel === 'Cluster set role assignment' && <ClusterSetAccessLevel />}
+      {(formData.clusterSetAccessLevel === undefined ||
+        formData.clusterSetAccessLevel === 'Cluster set role assignment') && <ClusterSetAccessLevel />}
     </WizardStep>,
-    <WizardStep
+    <ClusterGranularityWizardStep
       key="cluster-set-cluster-granularity"
-      name={t('Define cluster granularity')}
+      stepKey="cluster-set-cluster-granularity"
       id="scope-cluster-set-cluster-granularity"
       isHidden={
         formData.scopeType !== 'Select cluster sets' || formData.clusterSetAccessLevel !== 'Cluster role assignment'
       }
-    >
-      <GranularityStepContent
-        title={t('Define cluster granularity')}
-        description={t('Define cluster granularity options.')}
-      />
-      <div style={{ margin: '16px 0' }}>
-        <WizSelect
-          pathValueToInputValue={(pathValue) => pathValue || 'Cluster role assignment'}
-          path="selectedClustersAccessLevel"
-          label="Access level for selected clusters"
-          required
-          options={[
-            {
-              label: 'Cluster role assignment',
-              value: 'Cluster role assignment',
-              description: 'Grant access to all current and future resources on the cluster',
-            },
-            {
-              label: 'Project role assignment',
-              value: 'Project role assignment',
-              description: 'Grant access to specific projects on the cluster',
-            },
-          ]}
-        />
-      </div>
-      {formData.selectedClustersAccessLevel === 'Project role assignment' && (
-        <div style={{ marginTop: '16px' }}>
-          <ProjectsList selectedClusters={[{ name: 'local-cluster' }]} />
-        </div>
-      )}
-    </WizardStep>,
-    <WizardStep
+      description={t('Define cluster granularity options.')}
+      selectedClusters={[{ name: 'local-cluster' }]}
+      selectedClustersAccessLevel={formData.selectedClustersAccessLevel}
+    />,
+    <ClusterGranularityWizardStep
       key="cluster-granularity"
-      name={t('Define cluster granularity')}
+      stepKey="cluster-granularity"
       id="scope-cluster-granularity"
       isHidden={formData.scopeType !== 'Select clusters'}
-    >
-      <GranularityStepContent
-        title={t('Define cluster granularity')}
-        description={t('Define the level of access for the selected cluster(s).')}
-      />
-      <div style={{ margin: '16px 0' }}>
-        <WizSelect
-          pathValueToInputValue={(pathValue) => pathValue || 'Cluster role assignment'}
-          path="selectedClustersAccessLevel"
-          label="Access level for selected clusters"
-          required
-          options={[
-            {
-              label: 'Cluster role assignment',
-              value: 'Cluster role assignment',
-              description: 'Grant access to all current and future resources on the cluster',
-            },
-            {
-              label: 'Project role assignment',
-              value: 'Project role assignment',
-              description: 'Grant access to specific projects on the cluster',
-            },
-          ]}
-        />
-      </div>
-      {formData.selectedClustersAccessLevel === 'Project role assignment' && (
-        <div style={{ marginTop: '16px' }}>
-          <ProjectsList selectedClusters={selectedClusters} />
-        </div>
-      )}
-    </WizardStep>,
+      description={t('Define the level of access for the selected cluster(s).')}
+      selectedClusters={selectedClusters}
+      selectedClustersAccessLevel={formData.selectedClustersAccessLevel}
+    />,
   ]
 
   return (
@@ -337,9 +287,9 @@ export const RoleAssignmentWizardModal = ({
                             'A role assignment specifies a distinct action users or groups can perform when associated with a particular role.'
                           )}
                         </p>
-                        <a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.0/html/about/welcome-to-red-hat-advanced-cluster-management-for-kubernetes">
-                          Learn more about user management, including an example YAML file.
-                        </a>
+                        <Link to={DOC_LINKS.ACM_WELCOME} target="_blank">
+                          {t('Learn more about user management, including an example YAML file.')}
+                        </Link>
                       </div>
                     }
                     descriptionId="role-assignment-wizard-description"
