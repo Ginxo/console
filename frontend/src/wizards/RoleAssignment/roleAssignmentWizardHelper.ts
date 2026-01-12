@@ -6,7 +6,7 @@ import { RoleAssignmentWizardFormData } from './types'
 const getClusterNames = (data: RoleAssignmentWizardFormData, allClusterNames: string[]): string[] | undefined => {
   if (data.scope.kind === 'all') {
     return allClusterNames
-  } else if (data.scopeType === 'Select clusters' && data.selectedClusters) {
+  } else if (data.selectedClusters?.[0]) {
     return data.selectedClusters.map((cluster: any) => cluster.metadata?.name || cluster.name || cluster)
   }
 }
