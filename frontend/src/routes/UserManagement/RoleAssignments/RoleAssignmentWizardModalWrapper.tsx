@@ -9,12 +9,15 @@ import { existingRoleAssignmentsBySubjectRole, saveAllRoleAssignments } from './
 import { RoleAssignmentWizardModal } from '../../../wizards/RoleAssignment/RoleAssignmentWizardModal'
 import { wizardDataToRoleAssignmentToSave } from '../../../wizards/RoleAssignment/roleAssignmentWizardHelper'
 import { RoleAssignmentWizardFormData } from '../../../wizards/RoleAssignment/types'
+import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
+import { deleteRoleAssignment } from '../../../resources/clients/multicluster-role-assignment-client'
 
 type RoleAssignmentWizardModalWrapperProps = {
   close: () => void
   isOpen: boolean
   isEditing?: boolean
   preselected?: RoleAssignmentPreselected
+  editingRoleAssignment?: FlattenedRoleAssignment
 }
 
 export const RoleAssignmentWizardModalWrapper = ({
@@ -22,6 +25,7 @@ export const RoleAssignmentWizardModalWrapper = ({
   isOpen,
   isEditing,
   preselected,
+  editingRoleAssignment,
 }: RoleAssignmentWizardModalWrapperProps) => {
   const { multiclusterRoleAssignmentState } = useSharedAtoms()
   const multiClusterRoleAssignments = useRecoilValue(multiclusterRoleAssignmentState)
@@ -34,13 +38,35 @@ export const RoleAssignmentWizardModalWrapper = ({
   const { t } = useTranslation()
 
   const saveFromWizard = async (data: RoleAssignmentWizardFormData) => {
+    if (isEditing && editingRoleAssignment) {
+      await deleteRoleAssignment(editingRoleAssignment).promise
+    }
+
     const allClusterNames = [...new Set(placementClusters.flatMap((pc) => pc.clusters))]
 
     const roleAssignmentsToSave = wizardDataToRoleAssignmentToSave(data, allClusterNames)
+
+    const filteredMultiClusterRoleAssignments =
+      isEditing && editingRoleAssignment
+        ? multiClusterRoleAssignments.map((mcra) => {
+            if (mcra.metadata.name === editingRoleAssignment.relatedMulticlusterRoleAssignment.metadata.name) {
+              return {
+                ...mcra,
+                spec: {
+                  ...mcra.spec,
+                  roleAssignments:
+                    mcra.spec.roleAssignments?.filter((ra) => ra.name !== editingRoleAssignment.name) || [],
+                },
+              }
+            }
+            return mcra
+          })
+        : multiClusterRoleAssignments
+
     const existingBySubjectRole = existingRoleAssignmentsBySubjectRole(
       roleAssignmentsToSave,
       data.subject.kind,
-      multiClusterRoleAssignments,
+      filteredMultiClusterRoleAssignments,
       placementClusters
     )
 

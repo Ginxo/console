@@ -11,6 +11,9 @@ const getClusterNames = (data: RoleAssignmentWizardFormData, allClusterNames: st
   }
 }
 const getClusterSetNames = (data: RoleAssignmentWizardFormData): string[] | undefined => {
+  if (data.selectedClusters?.[0]) {
+    return undefined
+  }
   return data.scopeType === 'Select cluster sets' && data.selectedClusterSets
     ? data.selectedClusterSets.map((clusterSet: any) => clusterSet.metadata?.name || clusterSet.name || clusterSet)
     : undefined
