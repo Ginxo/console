@@ -146,7 +146,7 @@ const RoleAssignments = ({
   const canDelete = useIsAnyNamespaceAuthorized(rbacDelete(MulticlusterRoleAssignmentDefinition))
 
   const [roleAssignmentsToDisplay, setRoleAssignmentsToDisplay] = useState<FlattenedRoleAssignment[]>([])
-  const [savedRoleAssignments, setSavedRoleAssignments] = useState<RoleAssignmentToSave[]>([])
+  const [roleAssignmentsPendingToExist, setRoleAssignmentsPendingToExist] = useState<RoleAssignmentToSave[]>([])
 
   // User needs both create and patch to add role assignments
   const canCreateRoleAssignment = canCreate && canPatchRoleAssignment
@@ -343,7 +343,7 @@ const RoleAssignments = ({
       ...e,
       status: { ...e.status, status: 'Pending', name: e.status?.name ?? '' },
     }))
-    setSavedRoleAssignments(roleAssignmentsToSavePendingStatus)
+    setRoleAssignmentsPendingToExist([...roleAssignmentsPendingToExist, ...roleAssignmentsToSavePendingStatus])
   }
 
   const roleAssignmentToSaveToFlattenedRoleAssignment = (
@@ -367,13 +367,16 @@ const RoleAssignments = ({
   }
 
   useEffect(() => {
-    const convertedSavedRoleAssignments = savedRoleAssignments.map(roleAssignmentToSaveToFlattenedRoleAssignment)
-    const notExistingRoleAssignmentsYet = convertedSavedRoleAssignments.filter(
+    const roleAssignmentsPendingToExistFlattened = roleAssignmentsPendingToExist.map(
+      roleAssignmentToSaveToFlattenedRoleAssignment
+    )
+    const notExistingRoleAssignmentsYet = roleAssignmentsPendingToExistFlattened.filter(
       (e) => !roleAssignments.some((ra) => ra.name === e.name)
     )
 
     setRoleAssignmentsToDisplay([...roleAssignments, ...notExistingRoleAssignmentsYet])
-  }, [savedRoleAssignments, roleAssignments])
+    // setSavedRoleAssignments(notExistingRoleAssignmentsYet)
+  }, [roleAssignmentsPendingToExist, roleAssignments])
 
   // Action cell renderer (needs access to component state)
   const renderActionCell = (roleAssignment: FlattenedRoleAssignment) => (
