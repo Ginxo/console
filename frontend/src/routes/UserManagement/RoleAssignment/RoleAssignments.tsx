@@ -1,7 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { ButtonVariant } from '@patternfly/react-core'
 import { fitContent, nowrap } from '@patternfly/react-table'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { generatePath, Link } from 'react-router-dom-v5-compat'
 import { BulkActionModal, BulkActionModalProps } from '../../../components/BulkActionModal'
 import { useTranslation } from '../../../lib/acm-i18next'
@@ -10,8 +10,17 @@ import { DOC_LINKS, ViewDocumentationLink } from '../../../lib/doc-util'
 import { rbacCreate, rbacDelete, rbacPatch, useIsAnyNamespaceAuthorized } from '../../../lib/rbac-util'
 import { NavigationPath } from '../../../NavigationPath'
 import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
-import { deleteRoleAssignment } from '../../../resources/clients/multicluster-role-assignment-client'
-import { MulticlusterRoleAssignmentDefinition } from '../../../resources/multicluster-role-assignment'
+import { RoleAssignmentToSave } from '../../../resources/clients/model/role-assignment-to-save'
+import {
+  deleteRoleAssignment,
+  getRoleAssignmentName,
+} from '../../../resources/clients/multicluster-role-assignment-client'
+import {
+  ClusterSelection,
+  MulticlusterRoleAssignmentApiVersion,
+  MulticlusterRoleAssignmentDefinition,
+  MulticlusterRoleAssignmentKind,
+} from '../../../resources/multicluster-role-assignment'
 import { IRequestResult } from '../../../resources/utils/resource-request'
 import { AcmButton, AcmEmptyState, AcmTable, compareStrings, IAcmTableColumn } from '../../../ui-components'
 import { IAcmTableAction, IAcmTableButtonAction, ITableFilter } from '../../../ui-components/AcmTable/AcmTableTypes'
@@ -20,7 +29,6 @@ import { RoleAssignmentWizardModalWrapper } from '../RoleAssignments/RoleAssignm
 import { RoleAssignmentActionDropdown } from './RoleAssignmentActionDropdown'
 import { RoleAssignmentLabel } from './RoleAssignmentLabel'
 import { RoleAssignmentStatusComponent } from './RoleAssignmentStatusComponent'
-import { EmptyState, Spinner } from '@patternfly/react-core'
 
 // Component for rendering clickable role links
 const RoleLinkCell = ({ roleName }: { roleName: string }) => (
@@ -137,6 +145,9 @@ const RoleAssignments = ({
   const canPatchRoleAssignment = useIsAnyNamespaceAuthorized(rbacPatch(MulticlusterRoleAssignmentDefinition))
   const canDelete = useIsAnyNamespaceAuthorized(rbacDelete(MulticlusterRoleAssignmentDefinition))
 
+  const [roleAssignmentsToDisplay, setRoleAssignmentsToDisplay] = useState<FlattenedRoleAssignment[]>([])
+  const [savedRoleAssignments, setSavedRoleAssignments] = useState<RoleAssignmentToSave[]>([])
+
   // User needs both create and patch to add role assignments
   const canCreateRoleAssignment = canCreate && canPatchRoleAssignment
   // User needs both delete and patch to remove role assignments
@@ -157,18 +168,6 @@ const RoleAssignments = ({
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editingRoleAssignment, setEditingRoleAssignment] = useState<FlattenedRoleAssignment>()
-  const [isMutating, setIsMutating] = useState(false)
-  const editingKeyRef = useRef<string>()
-
-  useEffect(() => {
-    if (!isMutating || !editingKeyRef.current) return
-
-    const editedItemStillExists = roleAssignments.some((ra) => keyFn(ra) === editingKeyRef.current)
-    if (!editedItemStillExists) {
-      setIsMutating(false)
-      editingKeyRef.current = undefined
-    }
-  }, [roleAssignments, isMutating, keyFn])
 
   // Table actions for bulk operations
   const tableActions = useMemo<IAcmTableAction<FlattenedRoleAssignment>[]>(
@@ -228,7 +227,7 @@ const RoleAssignments = ({
     const allGroups = new Set<string>()
 
     // Extract all unique values from role assignments
-    for (const roleAssignment of roleAssignments) {
+    for (const roleAssignment of roleAssignmentsToDisplay) {
       // Add single role
       allRoles.add(roleAssignment.clusterRole)
 
@@ -317,7 +316,7 @@ const RoleAssignments = ({
     ]
 
     return allFilters.filter((filter) => !hiddenFilters?.includes(filter.id as any))
-  }, [roleAssignments, t, hiddenFilters])
+  }, [roleAssignmentsToDisplay, t, hiddenFilters])
 
   // Table action buttons
   const tableActionButtons = useMemo<IAcmTableButtonAction[]>(
@@ -338,6 +337,43 @@ const RoleAssignments = ({
     setEditingRoleAssignment(roleAssignment)
     setIsCreateModalOpen(true)
   }, [])
+
+  const handleRoleAssignmentSave = (roleAssignmentsToSave: RoleAssignmentToSave[]) => {
+    const roleAssignmentsToSavePendingStatus: RoleAssignmentToSave[] = roleAssignmentsToSave.map((e) => ({
+      ...e,
+      status: { ...e.status, status: 'Pending', name: e.status?.name ?? '' },
+    }))
+    setSavedRoleAssignments(roleAssignmentsToSavePendingStatus)
+  }
+
+  const roleAssignmentToSaveToFlattenedRoleAssignment = (
+    roleAssignmentToSave: RoleAssignmentToSave
+  ): FlattenedRoleAssignment => {
+    return {
+      ...roleAssignmentToSave,
+      relatedMulticlusterRoleAssignment: {
+        apiVersion: MulticlusterRoleAssignmentApiVersion,
+        kind: MulticlusterRoleAssignmentKind,
+        metadata: {},
+        spec: {
+          subject: roleAssignmentToSave.subject,
+          roleAssignments: [],
+        },
+      },
+      name: getRoleAssignmentName(roleAssignmentToSave),
+      clusterNames: roleAssignmentToSave.clusterNames ?? [],
+      clusterSelection: {} as ClusterSelection,
+    }
+  }
+
+  useEffect(() => {
+    const convertedSavedRoleAssignments = savedRoleAssignments.map(roleAssignmentToSaveToFlattenedRoleAssignment)
+    const notExistingRoleAssignmentsYet = convertedSavedRoleAssignments.filter(
+      (e) => !roleAssignments.some((ra) => ra.name === e.name)
+    )
+
+    setRoleAssignmentsToDisplay([...roleAssignments, ...notExistingRoleAssignmentsYet])
+  }, [savedRoleAssignments, roleAssignments])
 
   // Action cell renderer (needs access to component state)
   const renderActionCell = (roleAssignment: FlattenedRoleAssignment) => (
@@ -426,7 +462,7 @@ const RoleAssignments = ({
         key="role-assignments-table"
         columns={columns}
         keyFn={keyFn}
-        items={isLoading ? undefined : roleAssignments}
+        items={isLoading ? undefined : roleAssignmentsToDisplay}
         searchPlaceholder={t('Search for role assignments...')}
         filters={filters}
         tableActionButtons={tableActionButtons}
@@ -437,40 +473,36 @@ const RoleAssignments = ({
         }}
         resultView={{
           page: 1,
-          loading: (isLoading ?? false) || isMutating,
+          loading: isLoading ?? false,
           refresh: () => {},
           items: [],
           emptyResult: false,
-          processedItemCount: roleAssignments.length,
+          processedItemCount: roleAssignmentsToDisplay.length,
           isPreProcessed: false,
         }}
         emptyState={
-          isMutating ? (
-            <EmptyState titleText="Loading" icon={Spinner} headingLevel="h2" />
-          ) : (
-            <AcmEmptyState
-              key="roleAssignmentsEmptyState"
-              title={t('No role assignment created yet')}
-              message={t(
-                'No role assignments have been created for this entity yet. Create a role assignment to grant specific permissions.'
-              )}
-              action={
-                <div>
-                  <AcmButton
-                    variant="primary"
-                    onClick={() => setIsCreateModalOpen(true)}
-                    isDisabled={!canCreateRoleAssignment}
-                    tooltip={canCreateRoleAssignment ? '' : unauthorizedMessage}
-                  >
-                    {t('Create role assignment')}
-                  </AcmButton>
-                  {/* ) : null} */}
-                  {/* TODO: add correct documentation link */}
-                  <ViewDocumentationLink doclink={DOC_LINKS.CLUSTERS} />
-                </div>
-              }
-            />
-          )
+          <AcmEmptyState
+            key="roleAssignmentsEmptyState"
+            title={t('No role assignment created yet')}
+            message={t(
+              'No role assignments have been created for this entity yet. Create a role assignment to grant specific permissions.'
+            )}
+            action={
+              <div>
+                <AcmButton
+                  variant="primary"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  isDisabled={!canCreateRoleAssignment}
+                  tooltip={canCreateRoleAssignment ? '' : unauthorizedMessage}
+                >
+                  {t('Create role assignment')}
+                </AcmButton>
+                {/* ) : null} */}
+                {/* TODO: add correct documentation link */}
+                <ViewDocumentationLink doclink={DOC_LINKS.CLUSTERS} />
+              </div>
+            }
+          />
         }
       />
       <RoleAssignmentWizardModalWrapper
@@ -480,12 +512,7 @@ const RoleAssignments = ({
         }}
         isOpen={isCreateModalOpen}
         editingRoleAssignment={editingRoleAssignment}
-        onMutationStart={() => {
-          if (editingRoleAssignment) {
-            editingKeyRef.current = keyFn(editingRoleAssignment)
-            setIsMutating(true)
-          }
-        }}
+        onSave={handleRoleAssignmentSave}
         preselected={
           editingRoleAssignment
             ? {

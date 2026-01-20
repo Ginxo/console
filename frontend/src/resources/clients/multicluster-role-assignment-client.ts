@@ -229,7 +229,7 @@ export const useFindRoleAssignments = (query: MulticlusterRoleAssignmentQuery): 
  * @param roleAssignment - The role assignment to generate a name for
  * @returns A 16-character hash string as the role assignment name
  */
-const getRoleAssignmentName = (roleAssignment: RoleAssignmentToSave): string => {
+export const getRoleAssignmentName = (roleAssignment: RoleAssignmentToSave): string => {
   const sortedKeys = Object.keys(roleAssignment).sort((a, b) => a.localeCompare(b))
   const sortedObject: any = {}
   for (const key of sortedKeys) {
@@ -237,7 +237,7 @@ const getRoleAssignmentName = (roleAssignment: RoleAssignmentToSave): string => 
 
     if (['targetNamespaces', 'clusterNames', 'clusterSetNames'].includes(key) && value && Array.isArray(value)) {
       sortedObject[key] = [...value].sort((a, b) => a.localeCompare(b))
-    } else {
+    } else if (!['status'].includes(key)) {
       sortedObject[key] = value
     }
   }
