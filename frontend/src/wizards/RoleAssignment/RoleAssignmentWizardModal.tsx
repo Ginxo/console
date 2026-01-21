@@ -447,7 +447,7 @@ export const RoleAssignmentWizardModal = ({
                   id="review"
                   footer={{ nextButtonText: isEditing ? t('Save') : t('Create'), onNext: handleSubmit }}
                 >
-                  <ReviewStepContent formData={formData} preselected={preselected} />
+                  <ReviewStepContent formData={formData} preselected={preselected} isEditing={isEditing} />
                 </WizardStep>
               </Wizard>
             </DataContext.Provider>
