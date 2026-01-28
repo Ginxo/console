@@ -30,7 +30,7 @@ jest.mock('./GranularityStepContent', () => ({
 }))
 
 // Mock ProjectsList
-jest.mock('./ProjectsList', () => ({
+jest.mock('./Project/ProjectsList', () => ({
   ProjectsList: (props: any) => {
     mockProjectsList(props)
     return <div data-testid="projects-list">Projects List - Clusters: {props.selectedClusters?.length || 0}</div>

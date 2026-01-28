@@ -2,14 +2,14 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import * as managedClusterAction from '../../resources/managedclusteraction'
-import type { Cluster } from '../../routes/UserManagement/RoleAssignments/hook/RoleAssignmentDataHook'
-import { AcmToastContext } from '../../ui-components'
+import * as managedClusterAction from '../../../resources/managedclusteraction'
+import type { Cluster } from '../../../routes/UserManagement/RoleAssignments/hook/RoleAssignmentDataHook'
+import { AcmToastContext } from '../../../ui-components'
 import { CommonProjectCreate } from './CommonProjectCreate'
 
 // Mock the dependencies
-jest.mock('../../resources/managedclusteraction')
-jest.mock('../../components/project', () => ({
+jest.mock('../../../resources/managedclusteraction')
+jest.mock('../../../components/project', () => ({
   ProjectCreateForm: ({ onCancelCallback, onSubmit }: any) => (
     <div>
       <div>Mock ProjectCreateForm</div>

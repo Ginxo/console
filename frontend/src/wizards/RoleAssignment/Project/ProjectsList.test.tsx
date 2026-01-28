@@ -8,7 +8,7 @@ const capturedState = {
   additionalProjects: undefined as string[] | undefined,
 }
 
-jest.mock('../../components/ProjectsTable', () => ({
+jest.mock('../../../components/ProjectsTable', () => ({
   ProjectsTable: ({ selectedClusters = [], onCreateClick, onSelectionChange, additionalProjects }: any) => {
     // Capture additionalProjects for test assertions
     capturedState.additionalProjects = additionalProjects

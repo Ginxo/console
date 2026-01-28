@@ -1,10 +1,10 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { ButtonVariant, PageSection } from '@patternfly/react-core'
 import { useMemo, useState } from 'react'
-import { ProjectsTable, ProjectTableData } from '../../components/ProjectsTable'
-import { useTranslation } from '../../lib/acm-i18next'
-import type { Cluster } from '../../routes/UserManagement/RoleAssignments/hook/RoleAssignmentDataHook'
-import { IAcmTableButtonAction } from '../../ui-components/AcmTable/AcmTableTypes'
+import { ProjectsTable, ProjectTableData } from '../../../components/ProjectsTable'
+import { useTranslation } from '../../../lib/acm-i18next'
+import type { Cluster } from '../../../routes/UserManagement/RoleAssignments/hook/RoleAssignmentDataHook'
+import { IAcmTableButtonAction } from '../../../ui-components/AcmTable/AcmTableTypes'
 import { CommonProjectCreate } from './CommonProjectCreate'
 
 interface ProjectsListProps {

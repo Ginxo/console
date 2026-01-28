@@ -3,7 +3,7 @@ import { SelectOption } from '@patternfly/react-core'
 import { useTranslation } from '../../lib/acm-i18next'
 import { AcmSelect } from '../../ui-components'
 import { GranularityStepContent } from './GranularityStepContent'
-import { ProjectsList } from './ProjectsList'
+import { ProjectsList } from './Project/ProjectsList'
 import { RoleAssignmentWizardFormData } from './types'
 
 interface ClusterGranularityStepContentProps {
