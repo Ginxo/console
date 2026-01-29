@@ -1,9 +1,12 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { Alert, Button, ExpandableSection, Tooltip } from '@patternfly/react-core'
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
+import { fireManagedClusterActionCreate, ProjectRequestApiVersion, ProjectRequestKind } from '../../../resources'
 import { RoleAssignmentLabel } from '../../../routes/UserManagement/RoleAssignment/RoleAssignmentLabel'
+import { AcmToastContext } from '../../../ui-components'
+import { CommonProjectCreateProgressBar } from './CommonProjectCreateProgressBar'
 
 const ClusterNamespace = ({ clusterName, namespaces }: { clusterName: string; namespaces: string[] }) => {
   return (
@@ -20,24 +23,86 @@ const ClusterNamespace = ({ clusterName, namespaces }: { clusterName: string; na
 
 type MissingNamespacesAlertProps = {
   missingNamespacesClusterMap: Record<string, string[]>
-  onGenerateMissingNamespaces: (missingNamespacesClusterMap: Record<string, string[]>) => void
+  onSuccess?: (createdNamespaces: string[]) => void
+  onError?: (error: Error) => void
 }
 
 export const MissingNamespacesAlert = ({
   missingNamespacesClusterMap,
-  onGenerateMissingNamespaces,
+  onSuccess,
+  onError,
 }: MissingNamespacesAlertProps) => {
   const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const toastContext = useContext(AcmToastContext)
 
-  return (
+  const handleGenerateMissingNamespaces = async () => {
+    setIsGenerating(true)
+    try {
+      await Promise.all(
+        Object.entries(missingNamespacesClusterMap).map(([clusterName, namespaces]) =>
+          namespaces.map((namespace) =>
+            fireManagedClusterActionCreate(clusterName, {
+              apiVersion: ProjectRequestApiVersion,
+              kind: ProjectRequestKind,
+              metadata: { name: namespace },
+            })
+              .then(async (actionResponse) => {
+                if (actionResponse.actionDone === 'ActionDone') {
+                  toastContext.addAlert({
+                    title: t('Common project created'),
+                    message: t('{{name}} project has been successfully created for the cluster {{cluster}}.', {
+                      name: namespace,
+                      cluster: clusterName,
+                    }),
+                    type: 'success',
+                    autoClose: true,
+                  })
+                } else {
+                  throw new Error(actionResponse.message)
+                }
+              })
+              .catch((err) => {
+                toastContext.addAlert({
+                  title: t('Failed to create common project'),
+                  message: t(
+                    'Failed to create common project {{name}} for the cluster {{cluster}}. Error: {{error}}.',
+                    {
+                      name: namespace,
+                      cluster: clusterName,
+                      error: err.message,
+                    }
+                  ),
+                  type: 'danger',
+                  autoClose: true,
+                })
+                throw err
+              })
+          )
+        )
+      )
+      onSuccess?.([...new Set(Object.values(missingNamespacesClusterMap).flat())])
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error('Failed to create project')
+      onError?.(errorObj)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  return isGenerating ? (
+    <Alert variant="info" title={t('Generating missing namespaces...')}>
+      <CommonProjectCreateProgressBar successCount={0} errorCount={0} totalCount={0} />
+    </Alert>
+  ) : (
     <Alert
       variant="danger"
       title={t('Some clusters are missing namespaces')}
       actionLinks={
         <>
           <Tooltip content={t('This will generate missing namespaces per cluster')}>
-            <Button variant="secondary" onClick={() => onGenerateMissingNamespaces(missingNamespacesClusterMap)}>
+            <Button variant="secondary" onClick={handleGenerateMissingNamespaces}>
               {t('Generate missing namespaces')}
             </Button>
           </Tooltip>

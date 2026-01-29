@@ -1,5 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { SelectOption } from '@patternfly/react-core'
+import { useState } from 'react'
 import { useTranslation } from '../../lib/acm-i18next'
 import { AcmSelect } from '../../ui-components'
 import { GranularityStepContent } from './GranularityStepContent'
@@ -18,6 +19,7 @@ interface ClusterGranularityStepContentProps {
   ) => void
   missingNamespacesClusterMap: Record<string, string[]>
   isAnyClusterMissingNamespaces: boolean
+  onNewProjectsCreated: (projects: string[]) => void
 }
 
 export const ClusterGranularityStepContent = ({
@@ -29,8 +31,16 @@ export const ClusterGranularityStepContent = ({
   onClustersAccessLevelChange,
   missingNamespacesClusterMap,
   isAnyClusterMissingNamespaces,
+  onNewProjectsCreated,
 }: ClusterGranularityStepContentProps) => {
   const { t } = useTranslation()
+
+  const [additionalCreatedProjects, setAdditionalCreatedProjects] = useState<string[]>([])
+
+  const handleAdditionalCreatedProjects = (projects: string[]) => {
+    setAdditionalCreatedProjects([...additionalCreatedProjects, ...projects])
+    onNewProjectsCreated(projects)
+  }
 
   const handleClustersAccessLevelChange = (value?: string) =>
     onClustersAccessLevelChange?.(value as RoleAssignmentWizardFormData['selectedClustersAccessLevel'])
@@ -68,13 +78,17 @@ export const ClusterGranularityStepContent = ({
         <div style={{ marginTop: '16px' }}>
           {isAnyClusterMissingNamespaces && (
             <div style={{ marginBottom: '16px' }}>
-              <MissingNamespacesAlert missingNamespacesClusterMap={missingNamespacesClusterMap} />
+              <MissingNamespacesAlert
+                missingNamespacesClusterMap={missingNamespacesClusterMap}
+                onSuccess={handleAdditionalCreatedProjects}
+              />
             </div>
           )}
           <ProjectsList
             selectedClusters={selectedClusters}
             selectedNamespaces={selectedNamespaces}
             onSelectionChange={onNamespacesChange}
+            additionalCreatedProjects={additionalCreatedProjects}
           />
         </div>
       )}

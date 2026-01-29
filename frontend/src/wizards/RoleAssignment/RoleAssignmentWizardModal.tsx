@@ -385,10 +385,6 @@ export const RoleAssignmentWizardModal = ({
       name={t('Define cluster granularity')}
       id="scope-cluster-granularity"
       isHidden={formData.scopeType !== 'Select clusters' || hasNoClusters}
-      footer={{
-        isNextDisabled:
-          formData.selectedClustersAccessLevel === 'Project role assignment' && isAnyClusterMissingNamespaces,
-      }}
     >
       <ClusterGranularityStepContent
         description={t('Define the level of access for the selected cluster(s).')}

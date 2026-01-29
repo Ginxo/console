@@ -1,6 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { ButtonVariant, PageSection } from '@patternfly/react-core'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ProjectsTable, ProjectTableData } from '../../../components/ProjectsTable'
 import { useTranslation } from '../../../lib/acm-i18next'
 import type { Cluster } from '../../../routes/UserManagement/RoleAssignments/hook/RoleAssignmentDataHook'
@@ -11,13 +11,26 @@ interface ProjectsListProps {
   selectedClusters: Cluster[]
   selectedNamespaces?: string[]
   onSelectionChange: (namespaces: string[]) => void
+  additionalCreatedProjects?: string[]
 }
 
-export const ProjectsList = ({ selectedClusters, selectedNamespaces, onSelectionChange }: ProjectsListProps) => {
+export const ProjectsList = ({
+  selectedClusters,
+  selectedNamespaces,
+  onSelectionChange,
+  additionalCreatedProjects,
+}: ProjectsListProps) => {
   const { t } = useTranslation()
   const [isCreateCommonProject, setIsCreateCommonProject] = useState(false)
   // this is used to display the created projects in the projects table to avoid discrepancies between search results and the already created projects
   const [createdProjects, setCreatedProjects] = useState<string[]>([])
+
+  useEffect(() => {
+    setCreatedProjects([...createdProjects, ...(additionalCreatedProjects || [])])
+    console.log('KIKE additionalCreatedProjects', additionalCreatedProjects)
+    // create projects should not be a dependency of the effect otherwise it will cause a infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [additionalCreatedProjects])
 
   const selectedProjects = useMemo(
     () =>
