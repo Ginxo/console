@@ -22,6 +22,7 @@ import { ExampleScopesPanelContent } from './Scope/ExampleScope/ExampleScopesPan
 import { ScopeSelectionStepContent } from './ScopeSelectionStepContent'
 import { RoleAssignmentWizardFormData, RoleAssignmentWizardModalProps } from './types'
 import { usePreselectedData } from './usePreselectedData'
+import { useClusterGranularityValidation } from './useClusterGranularityValidation'
 
 const getWizardTitle = (
   isEditing: boolean | undefined,
@@ -215,6 +216,11 @@ export const RoleAssignmentWizardModal = ({
     setSelectedClusters,
   })
 
+  const { isAnyClusterMissingNamespaces, missingNamespacesClusterMap } = useClusterGranularityValidation({
+    selectedNamespaces: formData.scope.namespaces,
+    clusters: selectedClusters,
+  })
+
   useEffect(() => {
     const newKind = formData.scopeType === 'Global access' ? 'all' : 'specific'
     if (formData.scope.kind !== newKind) {
@@ -379,6 +385,10 @@ export const RoleAssignmentWizardModal = ({
       name={t('Define cluster granularity')}
       id="scope-cluster-granularity"
       isHidden={formData.scopeType !== 'Select clusters' || hasNoClusters}
+      footer={{
+        isNextDisabled:
+          formData.selectedClustersAccessLevel === 'Project role assignment' && isAnyClusterMissingNamespaces,
+      }}
     >
       <ClusterGranularityStepContent
         description={t('Define the level of access for the selected cluster(s).')}
@@ -387,6 +397,8 @@ export const RoleAssignmentWizardModal = ({
         onNamespacesChange={handleNamespacesChange}
         selectedClustersAccessLevel={formData.selectedClustersAccessLevel}
         onClustersAccessLevelChange={handleClustersAccessLevelChange}
+        missingNamespacesClusterMap={missingNamespacesClusterMap}
+        isAnyClusterMissingNamespaces={isAnyClusterMissingNamespaces}
       />
     </WizardStep>,
   ]

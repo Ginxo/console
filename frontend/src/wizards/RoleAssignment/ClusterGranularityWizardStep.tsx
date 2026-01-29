@@ -3,6 +3,7 @@ import { SelectOption } from '@patternfly/react-core'
 import { useTranslation } from '../../lib/acm-i18next'
 import { AcmSelect } from '../../ui-components'
 import { GranularityStepContent } from './GranularityStepContent'
+import { MissingNamespacesAlert } from './Project/MissingNamespacesAlert'
 import { ProjectsList } from './Project/ProjectsList'
 import { RoleAssignmentWizardFormData } from './types'
 
@@ -15,6 +16,8 @@ interface ClusterGranularityStepContentProps {
   onClustersAccessLevelChange: (
     clustersAccessLevel?: RoleAssignmentWizardFormData['selectedClustersAccessLevel']
   ) => void
+  missingNamespacesClusterMap: Record<string, string[]>
+  isAnyClusterMissingNamespaces: boolean
 }
 
 export const ClusterGranularityStepContent = ({
@@ -24,6 +27,8 @@ export const ClusterGranularityStepContent = ({
   onNamespacesChange,
   selectedClustersAccessLevel,
   onClustersAccessLevelChange,
+  missingNamespacesClusterMap,
+  isAnyClusterMissingNamespaces,
 }: ClusterGranularityStepContentProps) => {
   const { t } = useTranslation()
 
@@ -61,6 +66,11 @@ export const ClusterGranularityStepContent = ({
       </div>
       {selectedClustersAccessLevel === 'Project role assignment' && (
         <div style={{ marginTop: '16px' }}>
+          {isAnyClusterMissingNamespaces && (
+            <div style={{ marginBottom: '16px' }}>
+              <MissingNamespacesAlert missingNamespacesClusterMap={missingNamespacesClusterMap} />
+            </div>
+          )}
           <ProjectsList
             selectedClusters={selectedClusters}
             selectedNamespaces={selectedNamespaces}
