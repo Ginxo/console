@@ -20,9 +20,13 @@ const ClusterNamespace = ({ clusterName, namespaces }: { clusterName: string; na
 
 type MissingNamespacesAlertProps = {
   missingNamespacesClusterMap: Record<string, string[]>
+  onGenerateMissingNamespaces: (missingNamespacesClusterMap: Record<string, string[]>) => void
 }
 
-export const MissingNamespacesAlert = ({ missingNamespacesClusterMap }: MissingNamespacesAlertProps) => {
+export const MissingNamespacesAlert = ({
+  missingNamespacesClusterMap,
+  onGenerateMissingNamespaces,
+}: MissingNamespacesAlertProps) => {
   const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -33,7 +37,7 @@ export const MissingNamespacesAlert = ({ missingNamespacesClusterMap }: MissingN
       actionLinks={
         <>
           <Tooltip content={t('This will generate missing namespaces per cluster')}>
-            <Button variant="secondary" onClick={() => {}}>
+            <Button variant="secondary" onClick={() => onGenerateMissingNamespaces(missingNamespacesClusterMap)}>
               {t('Generate missing namespaces')}
             </Button>
           </Tooltip>
