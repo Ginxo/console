@@ -50,16 +50,15 @@ export const RoleAssignmentWizardModalWrapper = ({
       if (allSaved) {
         if (editingRoleAssignment) {
           deleteRoleAssignment(editingRoleAssignment)
-            .promise.catch((error: any) => {
-              toastContext.addAlert({
-                title: t('Role assignment update failed'),
-                message: t("The role assignment can't be deleted. Error: {{error}}", {
+            .promise.catch((error: any) =>
+              // This is a controlled error. See ACM-29897
+              console.error(
+                'Role assignment update failed',
+                t("The role assignment can't be deleted. Error: {{error}}", {
                   error: (error as Error).message,
-                }),
-                type: 'danger',
-                autoClose: true,
-              })
-            })
+                })
+              )
+            )
             .finally(() => {
               setSavedRoleAssignments([])
               setIsSaving(false)
