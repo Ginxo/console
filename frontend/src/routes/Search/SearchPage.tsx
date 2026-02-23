@@ -9,7 +9,6 @@ import _ from 'lodash'
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom-v5-compat'
 import { KubevirtProviderAlert } from '../../components/KubevirtProviderAlert'
-import { Pages, usePageVisitMetricHandler } from '../../hooks/console-metrics'
 import { useTranslation } from '../../lib/acm-i18next'
 import { NavigationPath } from '../../NavigationPath'
 import { getUserPreference, SavedSearch, UserPreference } from '../../resources/userpreference'
@@ -373,7 +372,6 @@ export default function SearchPage() {
     presetSearchQuery = '',
     preSelectedRelatedResources = [], // used to show any related resource on search page navigation
   } = transformBrowserUrlToSearchString(search)
-  usePageVisitMetricHandler(Pages.search)
   const { t } = useTranslation()
   const savedSearchesText = t('Saved searches')
   const suggestedQueryTemplates = useSuggestedQueryTemplates().templates as SavedSearch[]
@@ -470,18 +468,12 @@ export default function SearchPage() {
   }
 
   return (
-    <AcmPage
-      header={
-        <div>
-          <HeaderWithNotification messages={queryMessages} />
-          <RenderDropDownAndNewTab
-            selectedSearch={selectedSearch}
-            setSelectedSearch={setSelectedSearch}
-            savedSearchQueries={userSavedSearches}
-          />
-        </div>
-      }
-    >
+    <AcmPage header={<HeaderWithNotification messages={queryMessages} />}>
+      <RenderDropDownAndNewTab
+        selectedSearch={selectedSearch}
+        setSelectedSearch={setSelectedSearch}
+        savedSearchQueries={userSavedSearches}
+      />
       <PageSection hasBodyWrapper={false} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <SearchAlertGroup />
       </PageSection>

@@ -18,8 +18,6 @@ import { useCallback, useContext, useMemo, useState } from 'react'
 import { TFunction } from 'react-i18next'
 import { generatePath, useNavigate } from 'react-router-dom-v5-compat'
 import { HighlightSearchText } from '../../components/HighlightSearchText'
-import { Pages, usePageVisitMetricHandler } from '../../hooks/console-metrics'
-import { useLocalHubName } from '../../hooks/use-local-hub'
 import { useTranslation } from '../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../lib/doc-util'
 import { PluginContext } from '../../lib/PluginContext'
@@ -433,7 +431,6 @@ function createRepoFromArgoSource(source: any) {
 }
 
 export default function ApplicationsOverview() {
-  usePageVisitMetricHandler(Pages.application)
   const { t } = useTranslation()
   const { applicationsState, channelsState, placementRulesState, placementsState, subscriptionsState } =
     useSharedAtoms()
