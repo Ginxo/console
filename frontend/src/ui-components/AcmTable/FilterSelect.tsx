@@ -80,6 +80,7 @@ export const FilterSelect = ({
         const option = selection as string
         onSelect(optionToFilterMap.get(option) ?? '', option)
       }}
+      isScrollable
     >
       <SelectList>
         {hasFilter && <TextInput aria-label={t('Search')} onChange={(_event, value) => setFilterValue(value)} />}
