@@ -37,7 +37,13 @@ export interface RoleAssignment {
 export interface RoleAssignmentStatus {
   name: string
   status: 'Active' | 'Error' | 'Pending'
-  reason?: string
+  reason?:
+    | 'Processing'
+    | 'InvalidReference'
+    | 'NoMatchingClusters'
+    | 'SuccessfullyApplied'
+    | 'ApplicationFailed'
+    | 'MissingNamespaces'
   message?: string
   createdAt?: string
 }
