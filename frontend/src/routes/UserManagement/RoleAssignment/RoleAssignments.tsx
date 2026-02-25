@@ -318,7 +318,7 @@ const RoleAssignments = ({
           roleAssignment,
           callbacksPerReasonMap,
           isCallbackProcessing: isProcessingRoleAssignmentMap[roleAssignment.name],
-          areActionButtonsDisabled: isAnyRoleAssignmentProcessing,
+          areActionButtonsDisabled: isAnyRoleAssignmentProcessing || !canPatchRoleAssignment,
         }),
       exportContent: (roleAssignment) => roleAssignment.status?.status ?? '',
     },

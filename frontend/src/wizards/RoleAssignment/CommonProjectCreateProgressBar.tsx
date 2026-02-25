@@ -40,6 +40,7 @@ export const CommonProjectCreateProgressBar = ({
       aria-describedby="common-project-create-progress-bar"
       value={progressValue}
       title={hideTitle ? undefined : t('Creating common projects')}
+      aria-label={t('Creating common projects')}
       helperText={<HelperTextComponent errorCount={errorCount} successCount={successCount} />}
       variant={isErrorState ? 'danger' : 'success'}
     />

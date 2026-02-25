@@ -189,14 +189,20 @@ const RoleAssignmentStatusComponent = ({
           icon={<ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />}
           label={t('Error')}
           bodyContent={
-            <ExpandableSection
-              variant={ExpandableSectionVariant.truncate}
-              toggleText={isErrorExpanded ? t('Show less') : t('Show more')}
-              onToggle={onErrorToggle}
-              isExpanded={isErrorExpanded}
-            >
-              {roleAssignment.status?.message}
-            </ExpandableSection>
+            <Panel isScrollable>
+              <PanelMain>
+                <PanelMainBody>
+                  <ExpandableSection
+                    variant={ExpandableSectionVariant.truncate}
+                    toggleText={isErrorExpanded ? t('Show less') : t('Show more')}
+                    onToggle={onErrorToggle}
+                    isExpanded={isErrorExpanded}
+                  >
+                    {roleAssignment.status?.message}
+                  </ExpandableSection>
+                </PanelMainBody>
+              </PanelMain>
+            </Panel>
           }
           {...commonStatusTooltipProps}
         />
