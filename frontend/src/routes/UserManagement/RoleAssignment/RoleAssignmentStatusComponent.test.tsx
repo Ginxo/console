@@ -2,6 +2,8 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { RoleAssignmentStatus } from '../../../resources/multicluster-role-assignment'
+import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
+import { MulticlusterRoleAssignment } from '../../../resources/multicluster-role-assignment'
 import { RoleAssignmentStatusComponent } from './RoleAssignmentStatusComponent'
 
 jest.mock('../../../lib/acm-i18next', () => ({
@@ -37,19 +39,33 @@ jest.mock('@patternfly/react-core', () => {
 const baseStatus: RoleAssignmentStatus = {
   name: 'test-role-assignment',
   status: 'Active',
-  reason: 'Applied',
+  reason: 'SuccessfullyApplied',
   message: 'Role assignment applied successfully',
 }
 
+const createBaseRoleAssignment = (status?: RoleAssignmentStatus): FlattenedRoleAssignment => ({
+  name: 'test-role-assignment',
+  clusterRole: 'admin',
+  targetNamespaces: [],
+  clusterNames: [],
+  clusterSetNames: [],
+  clusterSelection: { type: 'placements', placements: [] },
+  relatedMulticlusterRoleAssignment: {} as MulticlusterRoleAssignment,
+  subject: { name: 'user1', kind: 'User' },
+  status: status ?? baseStatus,
+})
+
 describe('RoleAssignmentStatusComponent', () => {
-  it('renders Unknown when status is undefined', () => {
-    render(<RoleAssignmentStatusComponent />)
+  it('renders Unknown when roleAssignment has no status', () => {
+    render(<RoleAssignmentStatusComponent roleAssignment={{ ...createBaseRoleAssignment(), status: undefined }} />)
 
     expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
 
   it('renders Active label when status is Active', () => {
-    render(<RoleAssignmentStatusComponent status={{ ...baseStatus, status: 'Active' }} />)
+    render(
+      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })} />
+    )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
   })
@@ -57,12 +73,12 @@ describe('RoleAssignmentStatusComponent', () => {
   it('renders Error label when status is Error', () => {
     render(
       <RoleAssignmentStatusComponent
-        status={{
+        roleAssignment={createBaseRoleAssignment({
           ...baseStatus,
           status: 'Error',
-          reason: 'Failed',
+          reason: 'ApplicationFailed',
           message: 'Role assignment failed',
-        }}
+        })}
       />
     )
 
@@ -70,7 +86,9 @@ describe('RoleAssignmentStatusComponent', () => {
   })
 
   it('renders Pending label and spinner when status is Pending', () => {
-    render(<RoleAssignmentStatusComponent status={{ ...baseStatus, status: 'Pending' }} />)
+    render(
+      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Pending' })} />
+    )
 
     expect(screen.getByText('Pending')).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: 'Role Assignment being applied' })).toBeInTheDocument()
@@ -79,7 +97,10 @@ describe('RoleAssignmentStatusComponent', () => {
   it('renders Unknown when status has an unsupported value', () => {
     render(
       <RoleAssignmentStatusComponent
-        status={{ ...baseStatus, status: 'Something' as RoleAssignmentStatus['status'] }}
+        roleAssignment={createBaseRoleAssignment({
+          ...baseStatus,
+          status: 'Something' as RoleAssignmentStatus['status'],
+        })}
       />
     )
 
@@ -87,17 +108,21 @@ describe('RoleAssignmentStatusComponent', () => {
   })
 
   it('renders label when status has no reason or message', () => {
-    render(<RoleAssignmentStatusComponent status={{ name: 'ra1', status: 'Active' }} />)
+    render(
+      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ name: 'ra1', status: 'Active' })} />
+    )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
   })
 
   it('displays reason and message in popover when user hovers over label', () => {
-    render(<RoleAssignmentStatusComponent status={{ ...baseStatus, status: 'Active' }} />)
+    render(
+      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })} />
+    )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
     // Popover is mocked to always show content (simulating hover); reason and message are visible
-    expect(screen.getByText('Applied')).toBeInTheDocument()
+    expect(screen.getByText('Successfully applied')).toBeInTheDocument()
     expect(screen.getByText('Role assignment applied successfully')).toBeInTheDocument()
   })
 })
