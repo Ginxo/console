@@ -67,7 +67,7 @@ const ReasonString = ({ reason }: { reason: RoleAssignmentStatus['reason'] }) =>
     case 'SuccessfullyApplied':
       return t('Successfully applied')
     case 'MissingNamespaces':
-      return t('Missing namespaces')
+      return t('Missing projects')
     case 'ApplicationFailed':
       return t('Application failed')
     default:

@@ -141,9 +141,9 @@ const useRoleAssignmentsStatusHook = () => {
       )
     } else {
       toastContext.addAlert({
-        title: t('No missing namespaces'),
+        title: t('No missing projects'),
         message: t(
-          'No missing namespaces found for {{name}} RoleAssignment. MultiClusterRoleAssignment resource is reconciling information.',
+          'No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment resource is reconciling information.',
           {
             name: roleAssignment.name,
           }
@@ -194,21 +194,19 @@ const useRoleAssignmentsStatusHook = () => {
 
       if (callbackProgress.errorCount > 0) {
         toastContext.addAlert({
-          title: t('Error generating missing namespaces'),
-          message: t(
-            'Error generating missing namespaces for {{name}}. {{errorCount}} errors occurred. Please try again.',
-            {
-              name: roleAssignmentToProcess.name,
-              errorCount: callbackProgress.errorCount,
-            }
-          ),
+          title: t('Error creating missing projects'),
+          message: t('Error creating missing projects {{project}} for clusters {{cluster}}.', {
+            clusters: Object.keys(callbackProgress.errorClusterNamespacesMap).join(', '),
+            projects: Object.values(callbackProgress.errorClusterNamespacesMap).flat().join(', '),
+            errorCount: callbackProgress.errorCount,
+          }),
           type: 'danger',
           autoClose: true,
         })
       } else {
         toastContext.addAlert({
-          title: t('Missing namespaces generated'),
-          message: t('Missing namespaces for {{name}} have been successfully generated.', {
+          title: t('Missing projects created'),
+          message: t('Missing projects for {{name}} have been successfully created.', {
             name: roleAssignmentToProcess.name,
           }),
           type: 'success',
