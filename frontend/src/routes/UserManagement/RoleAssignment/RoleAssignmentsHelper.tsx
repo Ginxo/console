@@ -89,9 +89,9 @@ const renderNamespacesCell = (roleAssignment: FlattenedRoleAssignment) => (
 const renderStatusCell = (props: {
   roleAssignment: FlattenedRoleAssignment
   callbacksPerReasonMap?: RoleAssignmentStatusComponentProps['callbacksPerReasonMap']
-  callbackProgress?: RoleAssignmentStatusComponentProps['callbackProgress']
+  callbackProgress?: RoleAssignmentStatusComponentProps['isShowPopover']
   isCallbackProcessing: boolean
-  isCallbackDisabled?: boolean
+  areActionButtonsDisabled?: boolean
 }) => <RoleAssignmentStatusComponent {...props} />
 
 const renderClusterSetsCell = (roleAssignment: FlattenedRoleAssignment) => (

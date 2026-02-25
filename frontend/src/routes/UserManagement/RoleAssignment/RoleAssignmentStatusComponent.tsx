@@ -1,7 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import {
-  Alert,
-  AlertGroup,
   Button,
   ExpandableSection,
   ExpandableSectionVariant,
@@ -20,18 +18,17 @@ import { useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
 import { RoleAssignmentStatus } from '../../../resources/multicluster-role-assignment'
-import { CommonProjectCreateProgressBar } from '../../../wizards/RoleAssignment/CommonProjectCreateProgressBar'
 
 const ReasonFooter = ({
   roleAssignment,
   callbacksPerReasonMap,
+  areActionButtonsDisabled,
   isCallbackProcessing,
-  isCallbackDisabled,
 }: {
   roleAssignment: FlattenedRoleAssignment
   callbacksPerReasonMap: RoleAssignmentStatusComponentProps['callbacksPerReasonMap']
-  isCallbackProcessing: boolean
-  isCallbackDisabled?: boolean
+  areActionButtonsDisabled?: boolean
+  isCallbackProcessing?: boolean
 }) => {
   const { t } = useTranslation()
   const callback = roleAssignment.status?.reason ? callbacksPerReasonMap?.[roleAssignment.status.reason] : undefined
@@ -47,7 +44,8 @@ const ReasonFooter = ({
               ? callback(roleAssignment)
               : () => console.error('No callback method implemented for reason', roleAssignment.status?.reason)
           }
-          isDisabled={isCallbackProcessing || isCallbackDisabled}
+          isDisabled={areActionButtonsDisabled}
+          isLoading={isCallbackProcessing}
         >
           {t('Create missing projects')}
         </Button>
@@ -85,7 +83,7 @@ const StatusTooltip = ({
   footerContent,
   callbacksPerReasonMap,
   isCallbackProcessing,
-  isCallbackDisabled,
+  areActionButtonsDisabled,
 }: {
   roleAssignment: FlattenedRoleAssignment
   icon: TooltipProps['children']
@@ -94,22 +92,13 @@ const StatusTooltip = ({
   footerContent?: PopoverProps['footerContent']
   callbacksPerReasonMap: RoleAssignmentStatusComponentProps['callbacksPerReasonMap']
   isCallbackProcessing: boolean
-  isCallbackDisabled?: boolean
+  areActionButtonsDisabled?: boolean
 }) => {
   const { t } = useTranslation()
   const reason = roleAssignment.status?.reason ?? t('Not available')
   const message = roleAssignment.status?.message ?? t('Not available')
 
-  const LabelContent = (
-    <Label variant="outline" isDisabled={isCallbackProcessing} aria-disabled={true}>
-      <span style={{ paddingRight: '8px' }}>{icon}</span>
-      {label}
-    </Label>
-  )
-
-  return isCallbackProcessing ? (
-    LabelContent
-  ) : (
+  return (
     <Popover
       triggerAction="hover"
       headerContent={<ReasonString reason={reason} />}
@@ -127,41 +116,18 @@ const StatusTooltip = ({
           <ReasonFooter
             roleAssignment={roleAssignment}
             callbacksPerReasonMap={callbacksPerReasonMap}
+            areActionButtonsDisabled={areActionButtonsDisabled}
             isCallbackProcessing={isCallbackProcessing}
-            isCallbackDisabled={isCallbackDisabled}
           />
         )
       }
       position={PopoverPosition.left}
     >
-      {LabelContent}
+      <Label variant="outline" isDisabled={isCallbackProcessing} aria-disabled={true}>
+        <span style={{ paddingRight: '8px' }}>{icon}</span>
+        {label}
+      </Label>
     </Popover>
-  )
-}
-
-const CommonProjectCreateAlertProgress = ({
-  successCount,
-  errorCount,
-  totalCount,
-}: {
-  successCount: number
-  errorCount: number
-  totalCount: number
-}) => {
-  const { t } = useTranslation()
-  const variant = errorCount > 0 ? 'danger' : successCount === totalCount ? 'success' : 'info'
-
-  return (
-    <AlertGroup hasAnimations isToast isLiveRegion>
-      <Alert isLiveRegion variant={variant} title={t('Creating missing projects')}>
-        <CommonProjectCreateProgressBar
-          successCount={successCount}
-          errorCount={errorCount}
-          totalCount={totalCount}
-          hideTitle={true}
-        />
-      </Alert>
-    </AlertGroup>
   )
 }
 
@@ -179,21 +145,15 @@ export type RoleAssignmentStatusComponentProps = {
   callbacksPerReasonMap?: Partial<
     Record<NonNullable<RoleAssignmentStatus['reason']>, (roleAssignment: FlattenedRoleAssignment) => void>
   >
-  callbackProgress?: {
-    successCount: number
-    errorCount: number
-    totalCount: number
-  }
   isCallbackProcessing?: boolean
-  isCallbackDisabled?: boolean
+  areActionButtonsDisabled?: boolean
 }
 
 const RoleAssignmentStatusComponent = ({
   roleAssignment,
   callbacksPerReasonMap,
-  callbackProgress,
   isCallbackProcessing,
-  isCallbackDisabled,
+  areActionButtonsDisabled,
 }: RoleAssignmentStatusComponentProps) => {
   const { t } = useTranslation()
   const [isErrorExpanded, setIsErrorExpanded] = useState(false)
@@ -203,68 +163,55 @@ const RoleAssignmentStatusComponent = ({
     roleAssignment,
     callbacksPerReasonMap,
     isCallbackProcessing: isCallbackProcessing ?? false,
-    isCallbackDisabled,
+    areActionButtonsDisabled,
   }
 
-  return (
-    <>
-      {isCallbackProcessing && (
-        <CommonProjectCreateAlertProgress
-          successCount={callbackProgress?.successCount ?? 0}
-          errorCount={callbackProgress?.errorCount ?? 0}
-          totalCount={callbackProgress?.totalCount ?? 0}
+  switch (true) {
+    case isCallbackProcessing:
+      return (
+        <StatusTooltip
+          icon={<Spinner isInline aria-label="Creating common projects for the role assignment clusters" />}
+          label={t('Creating common projects')}
+          {...commonStatusTooltipProps}
         />
-      )}
-      {(() => {
-        switch (true) {
-          case isCallbackProcessing:
-            return (
-              <StatusTooltip
-                icon={<Spinner isInline aria-label="Creating common projects for the role assignment clusters" />}
-                label={t('Creating common projects')}
-                {...commonStatusTooltipProps}
-              />
-            )
-          case roleAssignment.status?.status === 'Active':
-            return (
-              <StatusTooltip
-                icon={<CheckCircleIcon color="var(--pf-t--global--icon--color--status--success--default)" />}
-                label={t('Active')}
-                {...commonStatusTooltipProps}
-              />
-            )
-          case roleAssignment.status?.status === 'Error':
-            return (
-              <StatusTooltip
-                icon={<ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />}
-                label={t('Error')}
-                bodyContent={
-                  <ExpandableSection
-                    variant={ExpandableSectionVariant.truncate}
-                    toggleText={isErrorExpanded ? t('Show less') : t('Show more')}
-                    onToggle={onErrorToggle}
-                    isExpanded={isErrorExpanded}
-                  >
-                    {roleAssignment.status?.message}
-                  </ExpandableSection>
-                }
-                {...commonStatusTooltipProps}
-              />
-            )
-          case roleAssignment.status?.status === 'Pending':
-            return (
-              <StatusTooltip
-                icon={<Spinner isInline aria-label="Role Assignment being applied" />}
-                label={t('Pending')}
-                {...commonStatusTooltipProps}
-              />
-            )
-          default:
-            return <p>{t('Unknown')}</p>
-        }
-      })()}
-    </>
-  )
+      )
+    case roleAssignment.status?.status === 'Active':
+      return (
+        <StatusTooltip
+          icon={<CheckCircleIcon color="var(--pf-t--global--icon--color--status--success--default)" />}
+          label={t('Active')}
+          {...commonStatusTooltipProps}
+        />
+      )
+    case roleAssignment.status?.status === 'Error':
+      return (
+        <StatusTooltip
+          icon={<ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />}
+          label={t('Error')}
+          bodyContent={
+            <ExpandableSection
+              variant={ExpandableSectionVariant.truncate}
+              toggleText={isErrorExpanded ? t('Show less') : t('Show more')}
+              onToggle={onErrorToggle}
+              isExpanded={isErrorExpanded}
+            >
+              {roleAssignment.status?.message}
+            </ExpandableSection>
+          }
+          {...commonStatusTooltipProps}
+        />
+      )
+    case roleAssignment.status?.status === 'Pending':
+      return (
+        <StatusTooltip
+          icon={<Spinner isInline aria-label="Role Assignment being applied" />}
+          label={t('Pending')}
+          {...commonStatusTooltipProps}
+        />
+      )
+    default:
+      return <p>{t('Unknown')}</p>
+  }
 }
 
 export { RoleAssignmentStatusComponent }
