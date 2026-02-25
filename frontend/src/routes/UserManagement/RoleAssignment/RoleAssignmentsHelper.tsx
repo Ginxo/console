@@ -8,7 +8,6 @@ import { IRequestResult } from '../../../resources/utils/resource-request'
 import { RoleAssignmentActionDropdown } from './RoleAssignmentActionDropdown'
 import { RoleAssignmentLabel } from './RoleAssignmentLabel'
 import { RoleAssignmentStatusComponent, RoleAssignmentStatusComponentProps } from './RoleAssignmentStatusComponent'
-import { RoleAssignmentStatus } from '../../../resources'
 
 // Component for rendering clickable role links
 const RoleLinkCell = ({ roleName }: { roleName: string }) => (
@@ -89,7 +88,6 @@ const renderNamespacesCell = (roleAssignment: FlattenedRoleAssignment) => (
 const renderStatusCell = (props: {
   roleAssignment: FlattenedRoleAssignment
   callbacksPerReasonMap?: RoleAssignmentStatusComponentProps['callbacksPerReasonMap']
-  callbackProgress?: RoleAssignmentStatusComponentProps['isShowPopover']
   isCallbackProcessing: boolean
   areActionButtonsDisabled?: boolean
 }) => <RoleAssignmentStatusComponent {...props} />
@@ -155,11 +153,11 @@ const renderActionCell = ({
 
 export {
   renderActionCell,
-  renderRoleCell,
-  renderSubjectNameCell,
-  renderNamespacesCell,
-  renderStatusCell,
-  renderClusterSetsCell,
   renderClustersCell,
+  renderClusterSetsCell,
   renderCreatedCell,
+  renderNamespacesCell,
+  renderRoleCell,
+  renderStatusCell,
+  renderSubjectNameCell,
 }
