@@ -6,6 +6,9 @@ import { FlattenedRoleAssignment } from '../../../resources/clients/model/flatte
 import { AcmAlertInfoWithId, AcmToastContext } from '../../../ui-components'
 import { CommonProjectCreateProgressBar } from '../../../wizards/RoleAssignment/CommonProjectCreateProgressBar'
 import { RoleAssignmentStatusComponentProps } from './RoleAssignmentStatusComponent'
+import { searchClient } from '../../Search/search-sdk/search-client'
+import { useSearchResultItemsQuery } from '../../Search/search-sdk/search-sdk'
+import { useClusterNamespaceMap } from '../../../utils/useClusterNamespaceMap'
 
 interface CallbackProgress {
   successCount: number
@@ -15,6 +18,10 @@ interface CallbackProgress {
 }
 
 const useRoleAssignmentsStatusHook = () => {
+  const { clusterNamespaceMap } = useClusterNamespaceMap()
+
+  console.log('KIKE clusterNamespaceMap', clusterNamespaceMap)
+
   const [callbackProgress, setCallbackProgress] = useState<CallbackProgress>({
     successCount: 0,
     errorCount: 0,
