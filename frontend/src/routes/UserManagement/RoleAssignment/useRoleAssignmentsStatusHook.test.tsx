@@ -52,7 +52,12 @@ const baseRoleAssignment: FlattenedRoleAssignment = {
   clusterSelection: { type: 'placements', placements: [] },
   relatedMulticlusterRoleAssignment: {} as MulticlusterRoleAssignment,
   subject: { name: 'user1', kind: 'User' },
-  status: { name: 'ra-1', status: 'Error', reason: 'MissingNamespaces', message: 'Missing namespaces' },
+  status: {
+    name: 'ra-1',
+    status: 'Error',
+    reason: 'ApplicationFailed',
+    message: 'namespaces "ns-a" not found',
+  },
 }
 
 describe('useRoleAssignmentsStatusHook', () => {
@@ -67,14 +72,14 @@ describe('useRoleAssignmentsStatusHook', () => {
     })
   })
 
-  it('returns callbacksPerReasonMap, isProcessingRoleAssignmentMap, isAnyRoleAssignmentProcessing', () => {
+  it('returns callbackMap, isProcessingRoleAssignmentMap, isAnyRoleAssignmentProcessing', () => {
     const { result } = renderHook(() => useRoleAssignmentsStatusHook(), { wrapper })
 
-    expect(result.current).toHaveProperty('callbacksPerReasonMap')
+    expect(result.current).toHaveProperty('callbackMap')
     expect(result.current).toHaveProperty('isProcessingRoleAssignmentMap')
     expect(result.current).toHaveProperty('isAnyRoleAssignmentProcessing')
-    expect(typeof result.current.callbacksPerReasonMap?.MissingNamespaces).toBe('function')
-    expect(typeof result.current.callbacksPerReasonMap?.ApplicationFailed).toBe('function')
+    expect(typeof result.current.callbackMap?.MissingNamespaces).toBe('function')
+    expect(typeof result.current.callbackMap?.ApplicationFailed).toBe('function')
     expect(result.current.isAnyRoleAssignmentProcessing).toBe(false)
     expect(result.current.isProcessingRoleAssignmentMap).toEqual({})
   })
@@ -89,7 +94,7 @@ describe('useRoleAssignmentsStatusHook', () => {
     })
 
     const { result } = renderHook(() => useRoleAssignmentsStatusHook(), { wrapper })
-    const handleMissing = result.current.callbacksPerReasonMap?.MissingNamespaces
+    const handleMissing = result.current.callbackMap?.MissingNamespaces
     expect(handleMissing).toBeDefined()
 
     await act(async () => {
@@ -107,7 +112,7 @@ describe('useRoleAssignmentsStatusHook', () => {
 
   it('handleMissingNamespaces creates projects and shows creating toast when missing namespaces exist', async () => {
     const { result } = renderHook(() => useRoleAssignmentsStatusHook(), { wrapper })
-    const handleMissing = result.current.callbacksPerReasonMap?.MissingNamespaces
+    const handleMissing = result.current.callbackMap?.MissingNamespaces
     expect(handleMissing).toBeDefined()
 
     await act(async () => {
@@ -133,7 +138,7 @@ describe('useRoleAssignmentsStatusHook', () => {
     fireManagedClusterActionCreateMock.mockReturnValue(createPromise)
 
     const { result } = renderHook(() => useRoleAssignmentsStatusHook(), { wrapper })
-    const handleMissing = result.current.callbacksPerReasonMap?.MissingNamespaces
+    const handleMissing = result.current.callbackMap?.MissingNamespaces
 
     expect(result.current.isAnyRoleAssignmentProcessing).toBe(false)
 

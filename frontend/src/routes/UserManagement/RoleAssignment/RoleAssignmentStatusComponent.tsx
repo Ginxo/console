@@ -19,23 +19,51 @@ import { useTranslation } from '../../../lib/acm-i18next'
 import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
 import { RoleAssignmentStatus } from '../../../resources/multicluster-role-assignment'
 
+/** Callback key for reason from API, plus MissingNamespaces for message-based "create missing projects" action. */
+export type RoleAssignmentCallbackReason = NonNullable<RoleAssignmentStatus['reason']> | 'MissingNamespaces'
+
+/** Matches Kubernetes-style "namespaces \"...\" not found" (e.g. from Failed to apply manifest). */
+const MISSING_NAMESPACES_MESSAGE_REGEX = /namespaces\s+["'][^"']*["']\s+not\s+found/i
+
+/** Checks if the message contains a missing namespaces message. */
+const isMissingNamespacesMessage = (reason: RoleAssignmentStatus['reason'], message: string | undefined): boolean => {
+  if (!message || reason !== 'ApplicationFailed') {
+    return false
+  } else {
+    const lower = message.toLowerCase()
+    return (
+      MISSING_NAMESPACES_MESSAGE_REGEX.test(message) || (lower.includes('namespaces') && lower.includes('not found'))
+    )
+  }
+}
+
+/**
+ * Reason footer component for the status tooltip.
+ * Displays the callback button if the reason is MissingNamespaces or the message contains a missing namespaces message.
+ * Displays the error message if the reason is ApplicationFailed.
+ * @param roleAssignment - The role assignment to display the status for
+ * @param callbackMap - A map of callbacks per reason. The key is the reason and the value is the callback function. This is used to display the callback button in the status tooltip.
+ * @param areActionButtonsDisabled - Whether the action buttons are disabled
+ * @param isCallbackProcessing - Whether the callback processing is in progress
+ * @returns The reason footer component
+ */
 const ReasonFooter = ({
   roleAssignment,
-  callbacksPerReasonMap,
+  callbackMap,
   areActionButtonsDisabled,
   isCallbackProcessing,
 }: {
   roleAssignment: FlattenedRoleAssignment
-  callbacksPerReasonMap: RoleAssignmentStatusComponentProps['callbacksPerReasonMap']
+  callbackMap: RoleAssignmentStatusComponentProps['callbackMap']
   areActionButtonsDisabled?: boolean
   isCallbackProcessing?: boolean
 }) => {
   const { t } = useTranslation()
-  const callback = roleAssignment.status?.reason ? callbacksPerReasonMap?.[roleAssignment.status.reason] : undefined
-
-  const isMissingNamespaces =
-    roleAssignment.status?.reason === 'MissingNamespaces' ||
-    (roleAssignment.status?.message?.includes('namespaces') && roleAssignment.status?.message?.includes('not found'))
+  const isMissingNamespaces = isMissingNamespacesMessage(roleAssignment.status?.reason, roleAssignment.status?.message)
+  const callback: (roleAssignment: FlattenedRoleAssignment) => void =
+    callbackMap[
+      isMissingNamespaces ? 'MissingNamespaces' : roleAssignment.status?.reason ?? ('' as RoleAssignmentCallbackReason)
+    ]
 
   return isMissingNamespaces ? (
     <Button
@@ -55,6 +83,12 @@ const ReasonFooter = ({
   ) : null
 }
 
+/**
+ * Reason string component for the status tooltip.
+ * Displays the reason string for the status tooltip.
+ * @param reason - The reason to display the string for
+ * @returns The reason string component
+ */
 const ReasonString = ({ reason }: { reason: RoleAssignmentStatus['reason'] }) => {
   const { t } = useTranslation()
   switch (reason) {
@@ -66,8 +100,6 @@ const ReasonString = ({ reason }: { reason: RoleAssignmentStatus['reason'] }) =>
       return t('No matching clusters')
     case 'SuccessfullyApplied':
       return t('Successfully applied')
-    case 'MissingNamespaces':
-      return t('Missing projects')
     case 'ApplicationFailed':
       return t('Application failed')
     default:
@@ -75,13 +107,26 @@ const ReasonString = ({ reason }: { reason: RoleAssignmentStatus['reason'] }) =>
   }
 }
 
+/**
+ * Status tooltip component for the role assignment status.
+ * Displays the status icon, label, body content, and footer content.
+ * @param roleAssignment - The role assignment to display the status for
+ * @param icon - The icon to display the status for
+ * @param label - The label to display the status for
+ * @param bodyContent - The body content to display the status for
+ * @param footerContent - The footer content to display the status for
+ * @param callbackMap - A map of callbacks per reason. The key is the reason and the value is the callback function. This is used to display the callback button in the status tooltip.
+ * @param isCallbackProcessing - Whether the callback processing is in progress
+ * @param areActionButtonsDisabled - Whether the action buttons are disabled
+ * @returns The status tooltip component
+ */
 const StatusTooltip = ({
   roleAssignment,
   icon,
   label,
   bodyContent,
   footerContent,
-  callbacksPerReasonMap,
+  callbackMap,
   isCallbackProcessing,
   areActionButtonsDisabled,
 }: {
@@ -90,7 +135,7 @@ const StatusTooltip = ({
   label: string
   bodyContent?: PopoverProps['bodyContent']
   footerContent?: PopoverProps['footerContent']
-  callbacksPerReasonMap: RoleAssignmentStatusComponentProps['callbacksPerReasonMap']
+  callbackMap: Record<RoleAssignmentCallbackReason, (roleAssignment: FlattenedRoleAssignment) => void>
   isCallbackProcessing: boolean
   areActionButtonsDisabled?: boolean
 }) => {
@@ -115,7 +160,7 @@ const StatusTooltip = ({
         footerContent ?? (
           <ReasonFooter
             roleAssignment={roleAssignment}
-            callbacksPerReasonMap={callbacksPerReasonMap}
+            callbackMap={callbackMap}
             areActionButtonsDisabled={areActionButtonsDisabled}
             isCallbackProcessing={isCallbackProcessing}
           />
@@ -131,24 +176,25 @@ const StatusTooltip = ({
   )
 }
 
-/** Props for the RoleAssignmentStatusComponent
- * @param roleAssignment - The role assignment to display the status for
- * @param callbacksPerReasonMap - A map of callbacks per reason. The key is the reason and the value is the callback function. This is used to display the callback button in the status tooltip.
- * @param isCallbackProcessing - Whether the callback processing is in progress
- * @param areActionButtonsDisabled - Whether the action buttons are disabled
- */
 export type RoleAssignmentStatusComponentProps = {
   roleAssignment: FlattenedRoleAssignment
-  callbacksPerReasonMap?: Partial<
-    Record<NonNullable<RoleAssignmentStatus['reason']>, (roleAssignment: FlattenedRoleAssignment) => void>
-  >
+  callbackMap: Record<RoleAssignmentCallbackReason, (roleAssignment: FlattenedRoleAssignment) => void>
   isCallbackProcessing?: boolean
   areActionButtonsDisabled?: boolean
 }
 
+/**
+ * Role assignment status component.
+ * Displays the status icon, label, body content, and footer content.
+ * @param roleAssignment - The role assignment to display the status for
+ * @param callbackMap - A map of callbacks per reason. The key is the reason and the value is the callback function. This is used to display the callback button in the status tooltip.
+ * @param isCallbackProcessing - Whether the callback processing is in progress
+ * @param areActionButtonsDisabled - Whether the action buttons are disabled
+ * @returns The role assignment status component
+ */
 const RoleAssignmentStatusComponent = ({
   roleAssignment,
-  callbacksPerReasonMap,
+  callbackMap,
   isCallbackProcessing,
   areActionButtonsDisabled,
 }: RoleAssignmentStatusComponentProps) => {
@@ -158,7 +204,7 @@ const RoleAssignmentStatusComponent = ({
 
   const commonStatusTooltipProps = {
     roleAssignment,
-    callbacksPerReasonMap,
+    callbackMap,
     isCallbackProcessing: isCallbackProcessing ?? false,
     areActionButtonsDisabled,
   }

@@ -5,7 +5,7 @@ import { AcmAlertInfo, AcmAlertInfoWithId } from '../../../ui-components'
 import { CommonProjectCreateProgressBar } from '../../../wizards/RoleAssignment/CommonProjectCreateProgressBar'
 import { fireManagedClusterActionCreate, ProjectRequestApiVersion, ProjectRequestKind } from '../../../resources'
 
-export interface CreateMissingProjectsProgress {
+export interface MultipleCallbackProgress {
   successCount: number
   errorCount: number
   totalCount: number
@@ -57,7 +57,7 @@ interface HandleMissingNamespacesDeps {
   clusterNamespaceMap: Record<string, string[]>
   addAlertCallback: (alertInfo: AcmAlertInfo) => AcmAlertInfoWithId
   onStartCallback: (roleAssignment: FlattenedRoleAssignment, creatingAlert: AcmAlertInfoWithId) => void
-  onProgressCallback: (progress: CreateMissingProjectsProgress) => void
+  onProgressCallback: (progress: MultipleCallbackProgress) => void
   t: (key: string, opts?: Record<string, unknown>) => string
 }
 

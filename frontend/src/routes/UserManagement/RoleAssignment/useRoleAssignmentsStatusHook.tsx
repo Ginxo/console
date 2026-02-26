@@ -9,12 +9,12 @@ import { CommonProjectCreateProgressBar } from '../../../wizards/RoleAssignment/
 import { RoleAssignmentStatusComponentProps } from './RoleAssignmentStatusComponent'
 import {
   handleMissingNamespaces as handleMissingNamespacesFn,
-  type CreateMissingProjectsProgress,
+  type MultipleCallbackProgress,
 } from './roleAssignmentErrorHandlingFunctions'
 
 const useRoleAssignmentsStatusHook = () => {
   const { clusterNamespaceMap } = useClusterNamespaceMap()
-  const [callbackProgress, setCallbackProgress] = useState<CreateMissingProjectsProgress>({
+  const [callbackProgress, setCallbackProgress] = useState<MultipleCallbackProgress>({
     successCount: 0,
     errorCount: 0,
     totalCount: 0,
@@ -109,17 +109,28 @@ const useRoleAssignmentsStatusHook = () => {
     }
   }, [callbackProgress, creatingMissingProjectsAlert, roleAssignmentToProcess?.name, t, toastContext])
 
-  const callbacksPerReasonMap: RoleAssignmentStatusComponentProps['callbacksPerReasonMap'] = {
+  const callbackMap: RoleAssignmentStatusComponentProps['callbackMap'] = {
     MissingNamespaces: (roleAssignment) => {
       void handleMissingNamespaces(roleAssignment)
     },
-    // TODO: to remove as soon as reason 'MissingNamespaces' is returned back
-    ApplicationFailed: (roleAssignment) => {
-      void handleMissingNamespaces(roleAssignment)
+    Processing: () => {
+      throw new Error('Processing callback not implemented')
+    },
+    InvalidReference: () => {
+      throw new Error('InvalidReference callback not implemented')
+    },
+    NoMatchingClusters: () => {
+      throw new Error('NoMatchingClusters callback not implemented')
+    },
+    SuccessfullyApplied: () => {
+      throw new Error('SuccessfullyApplied callback not implemented')
+    },
+    ApplicationFailed: () => {
+      throw new Error('SuccessfullyApplied callback not implemented')
     },
   }
   return {
-    callbacksPerReasonMap,
+    callbackMap,
     isProcessingRoleAssignmentMap,
     isAnyRoleAssignmentProcessing,
   }

@@ -1,10 +1,9 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import { fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { RoleAssignmentStatus } from '../../../resources/multicluster-role-assignment'
 import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
-import { MulticlusterRoleAssignment } from '../../../resources/multicluster-role-assignment'
-import { RoleAssignmentStatusComponent } from './RoleAssignmentStatusComponent'
+import { MulticlusterRoleAssignment, RoleAssignmentStatus } from '../../../resources/multicluster-role-assignment'
+import { RoleAssignmentStatusComponent, type RoleAssignmentCallbackReason } from './RoleAssignmentStatusComponent'
 
 jest.mock('../../../lib/acm-i18next', () => ({
   useTranslation: () => ({
@@ -78,16 +77,33 @@ const createBaseRoleAssignment = (status?: RoleAssignmentStatus): FlattenedRoleA
   status: status ?? baseStatus,
 })
 
+const defaultCallbackMap: Record<RoleAssignmentCallbackReason, (ra: FlattenedRoleAssignment) => void> = {
+  Processing: jest.fn(),
+  InvalidReference: jest.fn(),
+  NoMatchingClusters: jest.fn(),
+  SuccessfullyApplied: jest.fn(),
+  ApplicationFailed: jest.fn(),
+  MissingNamespaces: jest.fn(),
+}
+
 describe('RoleAssignmentStatusComponent', () => {
   it('renders Unknown when roleAssignment has no status', () => {
-    render(<RoleAssignmentStatusComponent roleAssignment={{ ...createBaseRoleAssignment(), status: undefined }} />)
+    render(
+      <RoleAssignmentStatusComponent
+        roleAssignment={{ ...createBaseRoleAssignment(), status: undefined }}
+        callbackMap={defaultCallbackMap}
+      />
+    )
 
     expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
 
   it('renders Active label when status is Active', () => {
     render(
-      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })} />
+      <RoleAssignmentStatusComponent
+        roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })}
+        callbackMap={defaultCallbackMap}
+      />
     )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
@@ -102,6 +118,7 @@ describe('RoleAssignmentStatusComponent', () => {
           reason: 'ApplicationFailed',
           message: 'Role assignment failed',
         })}
+        callbackMap={defaultCallbackMap}
       />
     )
 
@@ -110,7 +127,10 @@ describe('RoleAssignmentStatusComponent', () => {
 
   it('renders Pending label and spinner when status is Pending', () => {
     render(
-      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Pending' })} />
+      <RoleAssignmentStatusComponent
+        roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Pending' })}
+        callbackMap={defaultCallbackMap}
+      />
     )
 
     expect(screen.getByText('Pending')).toBeInTheDocument()
@@ -124,6 +144,7 @@ describe('RoleAssignmentStatusComponent', () => {
           ...baseStatus,
           status: 'Something' as RoleAssignmentStatus['status'],
         })}
+        callbackMap={defaultCallbackMap}
       />
     )
 
@@ -132,7 +153,10 @@ describe('RoleAssignmentStatusComponent', () => {
 
   it('renders label when status has no reason or message', () => {
     render(
-      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ name: 'ra1', status: 'Active' })} />
+      <RoleAssignmentStatusComponent
+        roleAssignment={createBaseRoleAssignment({ name: 'ra1', status: 'Active' })}
+        callbackMap={defaultCallbackMap}
+      />
     )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
@@ -140,7 +164,10 @@ describe('RoleAssignmentStatusComponent', () => {
 
   it('displays reason and message in popover when user hovers over label', () => {
     render(
-      <RoleAssignmentStatusComponent roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })} />
+      <RoleAssignmentStatusComponent
+        roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })}
+        callbackMap={defaultCallbackMap}
+      />
     )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
@@ -153,6 +180,7 @@ describe('RoleAssignmentStatusComponent', () => {
     render(
       <RoleAssignmentStatusComponent
         roleAssignment={createBaseRoleAssignment({ ...baseStatus, status: 'Active' })}
+        callbackMap={defaultCallbackMap}
         isCallbackProcessing
       />
     )
@@ -170,6 +198,7 @@ describe('RoleAssignmentStatusComponent', () => {
           reason: 'ApplicationFailed',
           message: 'Detailed error message here',
         })}
+        callbackMap={defaultCallbackMap}
       />
     )
 
@@ -186,6 +215,7 @@ describe('RoleAssignmentStatusComponent', () => {
           reason: 'ApplicationFailed',
           message: 'Error details',
         })}
+        callbackMap={defaultCallbackMap}
       />
     )
     const showMore = screen.getByText('Show more')
@@ -199,7 +229,6 @@ describe('RoleAssignmentStatusComponent', () => {
       ['InvalidReference', 'Invalid reference'],
       ['NoMatchingClusters', 'No matching clusters'],
       ['SuccessfullyApplied', 'Successfully applied'],
-      ['MissingNamespaces', 'Missing projects'],
       ['ApplicationFailed', 'Application failed'],
     ] as const)('displays translated reason for %s', (reason, expectedText) => {
       render(
@@ -210,6 +239,7 @@ describe('RoleAssignmentStatusComponent', () => {
             reason,
             message: 'Some message',
           })}
+          callbackMap={defaultCallbackMap}
         />
       )
       expect(screen.getByText(expectedText)).toBeInTheDocument()
@@ -224,6 +254,7 @@ describe('RoleAssignmentStatusComponent', () => {
             reason: 'CustomReason',
             message: 'Message',
           } as unknown as RoleAssignmentStatus)}
+          callbackMap={defaultCallbackMap}
         />
       )
       expect(screen.getByText('CustomReason')).toBeInTheDocument()
@@ -231,18 +262,23 @@ describe('RoleAssignmentStatusComponent', () => {
   })
 
   describe('ReasonFooter and Create missing projects button', () => {
-    it('shows Create missing projects button when reason is MissingNamespaces', () => {
+    it('shows Create missing projects button when reason is ApplicationFailed and message indicates missing namespaces', () => {
+      const onMissingNamespaces = jest.fn()
       render(
         <RoleAssignmentStatusComponent
           roleAssignment={createBaseRoleAssignment({
             ...baseStatus,
             status: 'Error',
-            reason: 'MissingNamespaces',
+            reason: 'ApplicationFailed',
             message: 'Namespaces not found',
           })}
+          callbackMap={{ ...defaultCallbackMap, MissingNamespaces: onMissingNamespaces }}
         />
       )
-      expect(screen.getByRole('button', { name: 'Create missing projects' })).toBeInTheDocument()
+      const button = screen.getByRole('button', { name: 'Create missing projects' })
+      expect(button).toBeInTheDocument()
+      fireEvent.click(button)
+      expect(onMissingNamespaces).toHaveBeenCalled()
     })
 
     it('shows Create missing projects button when message contains namespaces and not found', () => {
@@ -254,6 +290,7 @@ describe('RoleAssignmentStatusComponent', () => {
             reason: 'ApplicationFailed',
             message: 'Required namespaces not found on cluster',
           })}
+          callbackMap={defaultCallbackMap}
         />
       )
       expect(screen.getByRole('button', { name: 'Create missing projects' })).toBeInTheDocument()
@@ -265,9 +302,10 @@ describe('RoleAssignmentStatusComponent', () => {
           roleAssignment={createBaseRoleAssignment({
             ...baseStatus,
             status: 'Error',
-            reason: 'MissingNamespaces',
-            message: 'Missing',
+            reason: 'ApplicationFailed',
+            message: 'Required namespaces not found on cluster',
           })}
+          callbackMap={defaultCallbackMap}
           areActionButtonsDisabled
         />
       )
@@ -282,20 +320,18 @@ describe('RoleAssignmentStatusComponent', () => {
           roleAssignment={createBaseRoleAssignment({
             ...baseStatus,
             status: 'Error',
-            reason: 'MissingNamespaces',
-            message: 'Missing',
+            reason: 'ApplicationFailed',
+            message: 'Required namespaces not found on cluster',
           })}
-          callbacksPerReasonMap={{
-            MissingNamespaces: onMissingNamespaces,
-          }}
+          callbackMap={{ ...defaultCallbackMap, MissingNamespaces: onMissingNamespaces }}
         />
       )
-      screen.getByRole('button', { name: 'Create missing projects' }).click()
+      fireEvent.click(screen.getByRole('button', { name: 'Create missing projects' }))
       expect(onMissingNamespaces).toHaveBeenCalledTimes(1)
       expect(onMissingNamespaces).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'test-role-assignment',
-          status: expect.objectContaining({ reason: 'MissingNamespaces' }),
+          status: expect.objectContaining({ reason: 'ApplicationFailed' }),
         })
       )
     })
@@ -310,6 +346,7 @@ describe('RoleAssignmentStatusComponent', () => {
             status: 'Error',
             message: 'Something failed',
           })}
+          callbackMap={defaultCallbackMap}
         />
       )
       expect(screen.getByText('Not available')).toBeInTheDocument()
@@ -324,6 +361,7 @@ describe('RoleAssignmentStatusComponent', () => {
             reason: 'ApplicationFailed',
             message: undefined,
           })}
+          callbackMap={defaultCallbackMap}
         />
       )
       expect(screen.getByText('Error')).toBeInTheDocument()
@@ -339,6 +377,7 @@ describe('RoleAssignmentStatusComponent', () => {
             reason: 'SuccessfullyApplied',
             message: undefined,
           })}
+          callbackMap={defaultCallbackMap}
         />
       )
       expect(screen.getByText('Not available')).toBeInTheDocument()

@@ -5,7 +5,7 @@ import { MulticlusterRoleAssignment } from '../../../resources/multicluster-role
 import {
   getMissingNamespacesPerCluster,
   handleMissingNamespaces,
-  type CreateMissingProjectsProgress,
+  type MultipleCallbackProgress,
 } from './roleAssignmentErrorHandlingFunctions'
 
 jest.mock('../../../resources', () => ({
@@ -28,7 +28,7 @@ const baseRoleAssignment: FlattenedRoleAssignment = {
   clusterSelection: { type: 'placements', placements: [] },
   relatedMulticlusterRoleAssignment: {} as MulticlusterRoleAssignment,
   subject: { name: 'user1', kind: 'User' },
-  status: { name: 'ra-1', status: 'Error', reason: 'MissingNamespaces', message: 'Missing' },
+  status: { name: 'ra-1', status: 'Error', reason: 'ApplicationFailed', message: 'namespaces "default" not found' },
 }
 
 const mockT = (key: string, opts?: Record<string, unknown>) => key + (opts ? JSON.stringify(opts) : '')
@@ -191,7 +191,7 @@ describe('handleMissingNamespaces', () => {
     it('calls onProgressCallback with updated counts when all create calls succeed', async () => {
       await handleMissingNamespaces(baseRoleAssignment, defaultDeps)
 
-      const progressCalls = mockOnProgressCallback.mock.calls as [CreateMissingProjectsProgress][]
+      const progressCalls = mockOnProgressCallback.mock.calls as [MultipleCallbackProgress][]
       expect(progressCalls.length).toBeGreaterThanOrEqual(2)
       const lastCall = progressCalls[progressCalls.length - 1][0]
       expect(lastCall.successCount).toBe(3)
@@ -242,7 +242,7 @@ describe('handleMissingNamespaces', () => {
 
       await handleMissingNamespaces(baseRoleAssignment, defaultDeps)
 
-      const progressCalls = mockOnProgressCallback.mock.calls as [CreateMissingProjectsProgress][]
+      const progressCalls = mockOnProgressCallback.mock.calls as [MultipleCallbackProgress][]
       const lastCall = progressCalls[progressCalls.length - 1][0]
       expect(lastCall.errorCount).toBe(1)
       expect(Object.keys(lastCall.errorClusterNamespacesMap).length).toBeGreaterThanOrEqual(1)
@@ -268,7 +268,7 @@ describe('handleMissingNamespaces', () => {
       const expectedTotal = clusterNames.length * targetNamespaces.length
       expect(mockFireManagedClusterActionCreate).toHaveBeenCalledTimes(expectedTotal)
 
-      const progressCalls = mockOnProgressCallback.mock.calls as [CreateMissingProjectsProgress][]
+      const progressCalls = mockOnProgressCallback.mock.calls as [MultipleCallbackProgress][]
       const lastCall = progressCalls[progressCalls.length - 1][0]
       expect(lastCall.totalCount).toBe(expectedTotal)
       expect(lastCall.successCount).toBe(expectedTotal)
