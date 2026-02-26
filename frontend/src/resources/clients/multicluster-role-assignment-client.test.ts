@@ -67,8 +67,9 @@ jest.mock('./placement-client', () => ({
   createForClusters: jest.fn(),
   createForClusterSets: jest.fn(),
   isPlacementForClusterNames: jest.fn(),
-  isPlacementForClusterSets: jest.fn((placement: { spec?: { clusterSets?: string[] } }) =>
-    (placement.spec?.clusterSets !== undefined && (placement.spec.clusterSets?.length ?? 0) > 0) === true
+  isPlacementForClusterSets: jest.fn(
+    (placement: { spec?: { clusterSets?: string[] } }) =>
+      (placement.spec?.clusterSets !== undefined && (placement.spec.clusterSets?.length ?? 0) > 0) === true
   ),
   doesPlacementContainsClusterName: jest.fn(),
   doesPlacementContainsClusterSet: jest.fn(),
