@@ -96,6 +96,7 @@ import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom-v5-compat'
 import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
 import { MulticlusterRoleAssignment } from '../../../resources/multicluster-role-assignment'
+import { RoleAssignmentCallbackReason } from './RoleAssignmentStatusComponent'
 import {
   renderActionCell,
   renderClustersCell,
@@ -106,6 +107,15 @@ import {
   renderStatusCell,
   renderSubjectNameCell,
 } from './RoleAssignmentsHelper'
+
+const mockCallbackMap: Record<RoleAssignmentCallbackReason, (ra: FlattenedRoleAssignment) => void> = {
+  Processing: jest.fn(),
+  InvalidReference: jest.fn(),
+  NoMatchingClusters: jest.fn(),
+  SuccessfullyApplied: jest.fn(),
+  ApplicationFailed: jest.fn(),
+  MissingNamespaces: jest.fn(),
+}
 
 describe('RoleAssignmentsHelper', () => {
   const mockMulticlusterRoleAssignment: MulticlusterRoleAssignment = {
@@ -247,6 +257,7 @@ describe('RoleAssignmentsHelper', () => {
       })
       const cell = renderStatusCell({
         roleAssignment,
+        callbackMap: mockCallbackMap,
         isCallbackProcessing: false,
       })
 
@@ -267,6 +278,7 @@ describe('RoleAssignmentsHelper', () => {
       })
       const cell = renderStatusCell({
         roleAssignment,
+        callbackMap: mockCallbackMap,
         isCallbackProcessing: false,
       })
 
@@ -282,6 +294,7 @@ describe('RoleAssignmentsHelper', () => {
       })
       const cell = renderStatusCell({
         roleAssignment,
+        callbackMap: mockCallbackMap,
         isCallbackProcessing: false,
       })
 
@@ -295,6 +308,7 @@ describe('RoleAssignmentsHelper', () => {
       const roleAssignment = createMockRoleAssignment()
       const cell = renderStatusCell({
         roleAssignment,
+        callbackMap: mockCallbackMap,
         isCallbackProcessing: true,
       })
 
