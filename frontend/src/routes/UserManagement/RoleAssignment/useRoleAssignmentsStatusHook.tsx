@@ -1,38 +1,20 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { FlattenedRoleAssignment } from '../../../resources/clients/model/flattened-role-assignment'
 import { AcmAlertInfoWithId, AcmToastContext } from '../../../ui-components'
 import { useClusterNamespaceMap } from '../../../utils/useClusterNamespaceMap'
 import { CommonProjectCreateProgressBar } from '../../../wizards/RoleAssignment/CommonProjectCreateProgressBar'
 import { RoleAssignmentStatusComponentProps } from './RoleAssignmentStatusComponent'
-import { fireManagedClusterActionCreate, ProjectRequestKind, ProjectRequestApiVersion } from '../../../resources'
-
-interface CallbackProgress {
-  successCount: number
-  errorCount: number
-  totalCount: number
-  errorClusterNamespacesMap: Record<string, string[]>
-}
-
-const getMissingNamespacesPerCluster = (
-  clusterNamespaceMap: Record<string, string[]>,
-  targetNamespaces: string[],
-  clusterNamesSet: Set<string>
-) =>
-  Object.keys(clusterNamespaceMap)
-    .filter((cluster) => clusterNamesSet.has(cluster))
-    .reduce<Record<string, string[]>>((acc, cluster) => {
-      const existingNamespaces = clusterNamespaceMap[cluster] ?? []
-      const missing = targetNamespaces.filter((ns) => !existingNamespaces.includes(ns))
-      if (missing.length > 0) acc[cluster] = missing
-      return acc
-    }, {})
+import {
+  handleMissingNamespaces as handleMissingNamespacesFn,
+  type CreateMissingProjectsProgress,
+} from './roleAssignmentErrorHandlingFunctions'
 
 const useRoleAssignmentsStatusHook = () => {
   const { clusterNamespaceMap } = useClusterNamespaceMap()
-  const [callbackProgress, setCallbackProgress] = useState<CallbackProgress>({
+  const [callbackProgress, setCallbackProgress] = useState<CreateMissingProjectsProgress>({
     successCount: 0,
     errorCount: 0,
     totalCount: 0,
@@ -47,112 +29,22 @@ const useRoleAssignmentsStatusHook = () => {
   const toastContext = useContext(AcmToastContext)
   const { t } = useTranslation()
 
-  const handleMissingNamespaces = async (roleAssignment: FlattenedRoleAssignment) => {
-    const missingNamespacesPerCluster = getMissingNamespacesPerCluster(
-      clusterNamespaceMap,
-      roleAssignment.targetNamespaces ?? [],
-      new Set(roleAssignment.clusterNames ?? [])
-    )
-    const totalCount = Object.values(missingNamespacesPerCluster).reduce(
-      (sum, namespaces) => sum + namespaces.length,
-      0
-    )
-
-    if (totalCount > 0) {
-      setIsProcessingRoleAssignmentMap((prev) => ({ ...prev, [roleAssignment.name]: true }))
-      setRoleAssignmentToProcess(roleAssignment)
-      setCallbackProgress({ successCount: 0, errorCount: 0, totalCount, errorClusterNamespacesMap: {} })
-
-      setCreatingMissingProjectsAlert(
-        toastContext.addAlert({
-          title: t('Creating missing projects'),
-          message: <CommonProjectCreateProgressBar successCount={0} errorCount={0} totalCount={totalCount} />,
-          type: 'info',
-          autoClose: false,
-        })
-      )
-
-      const counter = {
-        success: 0,
-        error: 0,
-        errorClusterNamespacesMap: {} as Record<string, string[]>,
-        totalCount,
-      }
-
-      await Promise.all(
-        Object.entries(missingNamespacesPerCluster).flatMap(([clusterName, namespaces]) =>
-          namespaces.map((namespace) =>
-            fireManagedClusterActionCreate(clusterName, {
-              apiVersion: ProjectRequestApiVersion,
-              kind: ProjectRequestKind,
-              metadata: { name: namespace },
-            })
-              .then(async (actionResponse) => {
-                if (actionResponse.actionDone === 'ActionDone') {
-                  counter.success++
-                } else {
-                  counter.error++
-                  counter.errorClusterNamespacesMap[clusterName] = [
-                    ...(counter.errorClusterNamespacesMap[clusterName] || []),
-                    namespace,
-                  ]
-                  toastContext.addAlert({
-                    title: t('Error creating missing project'),
-                    message: t(
-                      'Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.',
-                      {
-                        project: namespace,
-                        cluster: clusterName,
-                        error: actionResponse.message,
-                      }
-                    ),
-                    type: 'danger',
-                    autoClose: true,
-                  })
-                }
-              })
-              .catch((err) => {
-                counter.error++
-                counter.errorClusterNamespacesMap[clusterName] = [
-                  ...(counter.errorClusterNamespacesMap[clusterName] || []),
-                  namespace,
-                ]
-                toastContext.addAlert({
-                  title: t('Error creating missing project'),
-                  message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-                    project: namespace,
-                    cluster: clusterName,
-                    error: err.message,
-                  }),
-                  type: 'danger',
-                  autoClose: true,
-                })
-              })
-              .finally(() =>
-                setCallbackProgress((prev) => ({
-                  ...prev,
-                  successCount: counter.success || 0,
-                  errorCount: counter.error || 0,
-                  errorClusterNamespacesMap: counter.errorClusterNamespacesMap,
-                }))
-              )
-          )
-        )
-      )
-    } else {
-      toastContext.addAlert({
-        title: t('No missing projects'),
-        message: t(
-          'No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment resource is reconciling information.',
-          {
-            name: roleAssignment.name,
-          }
-        ),
-        type: 'info',
-        autoClose: true,
+  const handleMissingNamespaces = useCallback(
+    (roleAssignment: FlattenedRoleAssignment) => {
+      void handleMissingNamespacesFn(roleAssignment, {
+        clusterNamespaceMap,
+        addAlertCallback: toastContext.addAlert,
+        t,
+        onStartCallback: (ra, creatingAlert) => {
+          setIsProcessingRoleAssignmentMap((prev) => ({ ...prev, [ra.name]: true }))
+          setRoleAssignmentToProcess(ra)
+          setCreatingMissingProjectsAlert(creatingAlert)
+        },
+        onProgressCallback: setCallbackProgress,
       })
-    }
-  }
+    },
+    [clusterNamespaceMap, toastContext, t]
+  )
 
   useEffect(
     () => () => {
@@ -184,6 +76,7 @@ const useRoleAssignmentsStatusHook = () => {
   useEffect(() => {
     if (
       roleAssignmentToProcess?.name &&
+      callbackProgress.totalCount > 0 &&
       callbackProgress.successCount + callbackProgress.errorCount === callbackProgress.totalCount
     ) {
       setIsProcessingRoleAssignmentMap((prev) => ({ ...prev, [roleAssignmentToProcess.name]: false }))
