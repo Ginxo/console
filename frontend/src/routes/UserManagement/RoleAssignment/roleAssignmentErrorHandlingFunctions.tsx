@@ -12,6 +12,31 @@ export interface CreateMissingProjectsProgress {
   errorClusterNamespacesMap: Record<string, string[]>
 }
 
+const handleActionError = (
+  clusterName: string,
+  namespace: string,
+  errorMessage: string,
+  counter: { error: number; errorClusterNamespacesMap: Record<string, string[]> },
+  addAlertCallback: (alertInfo: AcmAlertInfo) => AcmAlertInfoWithId,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): void => {
+  counter.error++
+  counter.errorClusterNamespacesMap[clusterName] = [
+    ...(counter.errorClusterNamespacesMap[clusterName] || []),
+    namespace,
+  ]
+  addAlertCallback({
+    title: t('Error creating missing project'),
+    message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
+      project: namespace,
+      cluster: clusterName,
+      error: errorMessage,
+    }),
+    type: 'danger',
+    autoClose: true,
+  })
+}
+
 export const getMissingNamespacesPerCluster = (
   clusterNamespaceMap: Record<string, string[]>,
   targetNamespaces: string[],
@@ -79,39 +104,11 @@ export async function handleMissingNamespaces(
           if (actionResponse.actionDone === 'ActionDone') {
             counter.success++
           } else {
-            counter.error++
-            counter.errorClusterNamespacesMap[clusterName] = [
-              ...(counter.errorClusterNamespacesMap[clusterName] || []),
-              namespace,
-            ]
-            addAlertCallback({
-              title: t('Error creating missing project'),
-              message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-                project: namespace,
-                cluster: clusterName,
-                error: actionResponse.message,
-              }),
-              type: 'danger',
-              autoClose: true,
-            })
+            handleActionError(clusterName, namespace, actionResponse.message ?? '', counter, addAlertCallback, t)
           }
         })
         .catch((err: Error) => {
-          counter.error++
-          counter.errorClusterNamespacesMap[clusterName] = [
-            ...(counter.errorClusterNamespacesMap[clusterName] || []),
-            namespace,
-          ]
-          addAlertCallback({
-            title: t('Error creating missing project'),
-            message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-              project: namespace,
-              cluster: clusterName,
-              error: err.message,
-            }),
-            type: 'danger',
-            autoClose: true,
-          })
+          handleActionError(clusterName, namespace, err.message, counter, addAlertCallback, t)
         })
         .finally(() =>
           onProgressCallback({
