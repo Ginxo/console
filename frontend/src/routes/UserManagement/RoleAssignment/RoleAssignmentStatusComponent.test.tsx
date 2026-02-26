@@ -225,7 +225,7 @@ describe('RoleAssignmentStatusComponent', () => {
             status: 'Error',
             reason: 'CustomReason',
             message: 'Message',
-          })}
+          } as unknown as RoleAssignmentStatus)}
         />
       )
       expect(screen.getByText('CustomReason')).toBeInTheDocument()
@@ -314,6 +314,21 @@ describe('RoleAssignmentStatusComponent', () => {
           })}
         />
       )
+      expect(screen.getByText('Not available')).toBeInTheDocument()
+    })
+
+    it('displays Not available in Error expandable section when status has no message', () => {
+      render(
+        <RoleAssignmentStatusComponent
+          roleAssignment={createBaseRoleAssignment({
+            ...baseStatus,
+            status: 'Error',
+            reason: 'ApplicationFailed',
+            message: undefined,
+          })}
+        />
+      )
+      expect(screen.getByText('Error')).toBeInTheDocument()
       expect(screen.getByText('Not available')).toBeInTheDocument()
     })
 

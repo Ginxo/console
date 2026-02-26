@@ -198,7 +198,7 @@ const RoleAssignmentStatusComponent = ({
                     onToggle={onErrorToggle}
                     isExpanded={isErrorExpanded}
                   >
-                    {roleAssignment.status?.message}
+                    {roleAssignment.status?.message ?? t('Not available')}
                   </ExpandableSection>
                 </PanelMainBody>
               </PanelMain>

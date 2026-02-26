@@ -75,6 +75,30 @@ describe('getMissingNamespacesPerCluster', () => {
     )
     expect(result).toEqual({})
   })
+
+  it('when targetNamespaces contains duplicates, returns each missing namespace only once per cluster (unique case)', () => {
+    const result = getMissingNamespacesPerCluster(
+      { 'cluster-1': [], 'cluster-2': ['ns-a'] },
+      ['ns-a', 'ns-a', 'ns-b', 'ns-b', 'ns-c'],
+      new Set(['cluster-1', 'cluster-2'])
+    )
+    expect(result).toEqual({
+      'cluster-1': ['ns-a', 'ns-b', 'ns-c'],
+      'cluster-2': ['ns-b', 'ns-c'],
+    })
+  })
+
+  it('when clusterNamespaceMap has duplicate namespaces per cluster, treats them as existing (non-unique case)', () => {
+    const result = getMissingNamespacesPerCluster(
+      { 'cluster-1': ['ns-a', 'ns-a', 'ns-b'], 'cluster-2': ['ns-a'] },
+      ['ns-a', 'ns-b', 'ns-c'],
+      new Set(['cluster-1', 'cluster-2'])
+    )
+    expect(result).toEqual({
+      'cluster-1': ['ns-c'],
+      'cluster-2': ['ns-b', 'ns-c'],
+    })
+  })
 })
 
 describe('handleMissingNamespaces', () => {
@@ -222,6 +246,34 @@ describe('handleMissingNamespaces', () => {
       const lastCall = progressCalls[progressCalls.length - 1][0]
       expect(lastCall.errorCount).toBe(1)
       expect(Object.keys(lastCall.errorClusterNamespacesMap).length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('processes more than 10 missing namespaces in batches and reports final counts correctly', async () => {
+      const clusterNames = ['cluster-a', 'cluster-b', 'cluster-c']
+      const targetNamespaces = ['ns-1', 'ns-2', 'ns-3', 'ns-4']
+      const clusterNamespaceMap: Record<string, string[]> = {
+        'cluster-a': [],
+        'cluster-b': [],
+        'cluster-c': [],
+      }
+      const ra = {
+        ...baseRoleAssignment,
+        clusterNames,
+        targetNamespaces,
+      }
+      const deps = { ...defaultDeps, clusterNamespaceMap }
+
+      await handleMissingNamespaces(ra, deps)
+
+      const expectedTotal = clusterNames.length * targetNamespaces.length
+      expect(mockFireManagedClusterActionCreate).toHaveBeenCalledTimes(expectedTotal)
+
+      const progressCalls = mockOnProgressCallback.mock.calls as [CreateMissingProjectsProgress][]
+      const lastCall = progressCalls[progressCalls.length - 1][0]
+      expect(lastCall.totalCount).toBe(expectedTotal)
+      expect(lastCall.successCount).toBe(expectedTotal)
+      expect(lastCall.errorCount).toBe(0)
+      expect(lastCall.errorClusterNamespacesMap).toEqual({})
     })
   })
 

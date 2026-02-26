@@ -16,15 +16,17 @@ export const getMissingNamespacesPerCluster = (
   clusterNamespaceMap: Record<string, string[]>,
   targetNamespaces: string[],
   clusterNamesSet: Set<string>
-): Record<string, string[]> =>
-  Array.from(clusterNamesSet).reduce<Record<string, string[]>>((acc, cluster) => {
-    const existingNamespaces = clusterNamespaceMap[cluster] ?? []
-    const missing = targetNamespaces.filter((ns) => !existingNamespaces.includes(ns))
+): Record<string, string[]> => {
+  const uniqueTargetNamespaces = Array.from(new Set(targetNamespaces))
+  return Array.from(clusterNamesSet).reduce<Record<string, string[]>>((acc, cluster) => {
+    const existingNamespaces = new Set(clusterNamespaceMap[cluster] ?? [])
+    const missing = uniqueTargetNamespaces.filter((ns) => !existingNamespaces.has(ns))
     if (missing.length > 0) {
       acc[cluster] = missing
     }
     return acc
   }, {})
+}
 
 interface HandleMissingNamespacesDeps {
   clusterNamespaceMap: Record<string, string[]>
@@ -67,63 +69,68 @@ export async function handleMissingNamespaces(
       totalCount,
     }
 
-    await Promise.all(
-      Object.entries(missingNamespacesPerCluster).flatMap(([clusterName, namespaces]) =>
-        namespaces.map((namespace) =>
-          fireManagedClusterActionCreate(clusterName, {
-            apiVersion: ProjectRequestApiVersion,
-            kind: ProjectRequestKind,
-            metadata: { name: namespace },
+    const createMissingProject = (clusterName: string, namespace: string) =>
+      fireManagedClusterActionCreate(clusterName, {
+        apiVersion: ProjectRequestApiVersion,
+        kind: ProjectRequestKind,
+        metadata: { name: namespace },
+      })
+        .then((actionResponse) => {
+          if (actionResponse.actionDone === 'ActionDone') {
+            counter.success++
+          } else {
+            counter.error++
+            counter.errorClusterNamespacesMap[clusterName] = [
+              ...(counter.errorClusterNamespacesMap[clusterName] || []),
+              namespace,
+            ]
+            addAlertCallback({
+              title: t('Error creating missing project'),
+              message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
+                project: namespace,
+                cluster: clusterName,
+                error: actionResponse.message,
+              }),
+              type: 'danger',
+              autoClose: true,
+            })
+          }
+        })
+        .catch((err: Error) => {
+          counter.error++
+          counter.errorClusterNamespacesMap[clusterName] = [
+            ...(counter.errorClusterNamespacesMap[clusterName] || []),
+            namespace,
+          ]
+          addAlertCallback({
+            title: t('Error creating missing project'),
+            message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
+              project: namespace,
+              cluster: clusterName,
+              error: err.message,
+            }),
+            type: 'danger',
+            autoClose: true,
           })
-            .then(async (actionResponse) => {
-              if (actionResponse.actionDone === 'ActionDone') {
-                counter.success++
-              } else {
-                counter.error++
-                counter.errorClusterNamespacesMap[clusterName] = [
-                  ...(counter.errorClusterNamespacesMap[clusterName] || []),
-                  namespace,
-                ]
-                addAlertCallback({
-                  title: t('Error creating missing project'),
-                  message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-                    project: namespace,
-                    cluster: clusterName,
-                    error: actionResponse.message,
-                  }),
-                  type: 'danger',
-                  autoClose: true,
-                })
-              }
-            })
-            .catch((err: Error) => {
-              counter.error++
-              counter.errorClusterNamespacesMap[clusterName] = [
-                ...(counter.errorClusterNamespacesMap[clusterName] || []),
-                namespace,
-              ]
-              addAlertCallback({
-                title: t('Error creating missing project'),
-                message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-                  project: namespace,
-                  cluster: clusterName,
-                  error: err.message,
-                }),
-                type: 'danger',
-                autoClose: true,
-              })
-            })
-            .finally(() =>
-              onProgressCallback({
-                successCount: counter.success || 0,
-                errorCount: counter.error || 0,
-                totalCount: counter.totalCount,
-                errorClusterNamespacesMap: counter.errorClusterNamespacesMap,
-              })
-            )
+        })
+        .finally(() =>
+          onProgressCallback({
+            successCount: counter.success || 0,
+            errorCount: counter.error || 0,
+            totalCount: counter.totalCount,
+            errorClusterNamespacesMap: counter.errorClusterNamespacesMap,
+          })
         )
-      )
+
+    const queue = Object.entries(missingNamespacesPerCluster).flatMap(([clusterName, namespaces]) =>
+      namespaces.map((namespace) => ({ clusterName, namespace }))
     )
+
+    const concurrency = 10
+    for (let i = 0; i < queue.length; i += concurrency) {
+      const batch = queue.slice(i, i + concurrency)
+      await Promise.all(batch.map(({ clusterName, namespace }) => createMissingProject(clusterName, namespace)))
+    }
   } else {
     addAlertCallback({
       title: t('No missing projects'),
