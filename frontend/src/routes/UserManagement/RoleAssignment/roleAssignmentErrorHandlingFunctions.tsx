@@ -128,7 +128,7 @@ export async function handleMissingNamespaces(
     addAlertCallback({
       title: t('No missing projects'),
       message: t(
-        'No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment resource is reconciling information.',
+        'No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment reconciliation is in progress.',
         { name: roleAssignment.name }
       ),
       type: 'info',

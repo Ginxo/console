@@ -2117,7 +2117,7 @@
   "No labels": "No labels",
   "No matching clusters": "No matching clusters",
   "No missing projects": "No missing projects",
-  "No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment resource is reconciling information.": "No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment resource is reconciling information.",
+  "No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment reconciliation is in progress.": "No missing projects found for {{name}} RoleAssignment. MultiClusterRoleAssignment reconciliation is in progress.",
   "No nodes found": "No nodes found",
   "No owners": "No owners",
   "No parameter resources": "No parameter resources",

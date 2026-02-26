@@ -40,12 +40,14 @@ const ReasonFooter = ({
   return isMissingNamespaces ? (
     <Button
       variant="primary"
-      onClick={() =>
-        callback
-          ? callback(roleAssignment)
-          : () => console.error('No callback method implemented for reason', roleAssignment.status?.reason)
-      }
-      isDisabled={areActionButtonsDisabled}
+      onClick={() => {
+        if (callback) {
+          callback(roleAssignment)
+        } else {
+          console.error('No callback method implemented for reason', roleAssignment.status?.reason)
+        }
+      }}
+      isDisabled={areActionButtonsDisabled || !callback}
       isLoading={isCallbackProcessing}
     >
       {t('Create missing projects')}
@@ -121,7 +123,7 @@ const StatusTooltip = ({
       }
       position={PopoverPosition.left}
     >
-      <Label variant="outline" isDisabled={isCallbackProcessing} aria-disabled={true}>
+      <Label variant="outline" isDisabled={isCallbackProcessing} aria-disabled={isCallbackProcessing}>
         <span style={{ paddingRight: '8px' }}>{icon}</span>
         {label}
       </Label>
@@ -168,7 +170,7 @@ const RoleAssignmentStatusComponent = ({
     case isCallbackProcessing:
       return (
         <StatusTooltip
-          icon={<Spinner isInline aria-label="Creating common projects for the role assignment clusters" />}
+          icon={<Spinner isInline aria-label={t('Creating common projects')} />}
           label={t('Creating common projects')}
           {...commonStatusTooltipProps}
         />

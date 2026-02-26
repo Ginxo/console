@@ -223,7 +223,7 @@ describe('RoleAssignmentStatusComponent', () => {
           roleAssignment={createBaseRoleAssignment({
             ...baseStatus,
             status: 'Error',
-            reason: 'CustomReason' as RoleAssignmentStatus['reason'],
+            reason: 'CustomReason',
             message: 'Message',
           })}
         />
