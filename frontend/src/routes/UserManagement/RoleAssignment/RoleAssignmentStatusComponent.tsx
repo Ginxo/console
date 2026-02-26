@@ -132,13 +132,10 @@ const StatusTooltip = ({
 }
 
 /** Props for the RoleAssignmentStatusComponent
- * @param status - The status of the role assignment
+ * @param roleAssignment - The role assignment to display the status for
  * @param callbacksPerReasonMap - A map of callbacks per reason. The key is the reason and the value is the callback function. This is used to display the callback button in the status tooltip.
- * @param callbackProgress - The status of the callback processing
- * @param callbackProgress.isProcessing - Whether the callback processing is in progress
- * @param callbackProgress.successCount - The number of successful callbacks
- * @param callbackProgress.errorCount - The number of error callbacks
- * @param callbackProgress.totalCount - The total number of callbacks
+ * @param isCallbackProcessing - Whether the callback processing is in progress
+ * @param areActionButtonsDisabled - Whether the action buttons are disabled
  */
 export type RoleAssignmentStatusComponentProps = {
   roleAssignment: FlattenedRoleAssignment
