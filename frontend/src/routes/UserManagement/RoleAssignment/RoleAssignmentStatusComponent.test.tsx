@@ -158,9 +158,7 @@ describe('RoleAssignmentStatusComponent', () => {
     )
 
     expect(screen.getByText('Creating common projects')).toBeInTheDocument()
-    expect(
-      screen.getByRole('progressbar', { name: 'Creating common projects for the role assignment clusters' })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Creating common projects' })).toBeInTheDocument()
   })
 
   it('renders Error state with expandable section containing message', () => {
