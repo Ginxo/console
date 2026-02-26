@@ -210,7 +210,7 @@ const RoleAssignmentStatusComponent = ({
     case roleAssignment.status?.status === 'Pending':
       return (
         <StatusTooltip
-          icon={<Spinner isInline aria-label="Role Assignment being applied" />}
+          icon={<Spinner isInline aria-label={t('Role Assignment being applied')} />}
           label={t('Pending')}
           {...commonStatusTooltipProps}
         />
