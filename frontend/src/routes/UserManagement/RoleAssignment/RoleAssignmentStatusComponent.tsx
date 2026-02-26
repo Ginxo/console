@@ -32,27 +32,25 @@ const ReasonFooter = ({
 }) => {
   const { t } = useTranslation()
   const callback = roleAssignment.status?.reason ? callbacksPerReasonMap?.[roleAssignment.status.reason] : undefined
-  switch (true) {
-    // TODO: to adapt as soon as reason 'MissingNamespaces' is returned back
-    case roleAssignment.status?.reason === 'MissingNamespaces' ||
-      (roleAssignment.status?.message?.includes('namespaces') && roleAssignment.status?.message?.includes('not found')):
-      return (
-        <Button
-          variant="primary"
-          onClick={() =>
-            callback
-              ? callback(roleAssignment)
-              : () => console.error('No callback method implemented for reason', roleAssignment.status?.reason)
-          }
-          isDisabled={areActionButtonsDisabled}
-          isLoading={isCallbackProcessing}
-        >
-          {t('Create missing projects')}
-        </Button>
-      )
-    default:
-      return null
-  }
+
+  const isMissingNamespaces =
+    roleAssignment.status?.reason === 'MissingNamespaces' ||
+    (roleAssignment.status?.message?.includes('namespaces') && roleAssignment.status?.message?.includes('not found'))
+
+  return isMissingNamespaces ? (
+    <Button
+      variant="primary"
+      onClick={() =>
+        callback
+          ? callback(roleAssignment)
+          : () => console.error('No callback method implemented for reason', roleAssignment.status?.reason)
+      }
+      isDisabled={areActionButtonsDisabled}
+      isLoading={isCallbackProcessing}
+    >
+      {t('Create missing projects')}
+    </Button>
+  ) : null
 }
 
 const ReasonString = ({ reason }: { reason: RoleAssignmentStatus['reason'] }) => {

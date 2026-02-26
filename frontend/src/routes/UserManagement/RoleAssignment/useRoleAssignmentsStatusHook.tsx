@@ -21,7 +21,7 @@ const getMissingNamespacesPerCluster = (
   targetNamespaces: string[],
   clusterNamesSet: Set<string>
 ) =>
-  (Object.keys(clusterNamespaceMap) as string[])
+  Object.keys(clusterNamespaceMap)
     .filter((cluster) => clusterNamesSet.has(cluster))
     .reduce<Record<string, string[]>>((acc, cluster) => {
       const existingNamespaces = clusterNamespaceMap[cluster] ?? []
@@ -80,7 +80,7 @@ const useRoleAssignmentsStatusHook = () => {
       }
 
       await Promise.all(
-        Object.entries(missingNamespacesPerCluster).map(([clusterName, namespaces]) =>
+        Object.entries(missingNamespacesPerCluster).flatMap(([clusterName, namespaces]) =>
           namespaces.map((namespace) =>
             fireManagedClusterActionCreate(clusterName, {
               apiVersion: ProjectRequestApiVersion,
@@ -217,9 +217,13 @@ const useRoleAssignmentsStatusHook = () => {
   }, [callbackProgress, creatingMissingProjectsAlert, roleAssignmentToProcess?.name, t, toastContext])
 
   const callbacksPerReasonMap: RoleAssignmentStatusComponentProps['callbacksPerReasonMap'] = {
-    MissingNamespaces: handleMissingNamespaces,
+    MissingNamespaces: (roleAssignment) => {
+      void handleMissingNamespaces(roleAssignment)
+    },
     // TODO: to remove as soon as reason 'MissingNamespaces' is returned back
-    ApplicationFailed: handleMissingNamespaces,
+    ApplicationFailed: (roleAssignment) => {
+      void handleMissingNamespaces(roleAssignment)
+    },
   }
   return {
     callbacksPerReasonMap,
