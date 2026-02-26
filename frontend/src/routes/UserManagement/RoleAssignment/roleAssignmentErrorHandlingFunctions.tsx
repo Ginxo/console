@@ -17,14 +17,14 @@ export const getMissingNamespacesPerCluster = (
   targetNamespaces: string[],
   clusterNamesSet: Set<string>
 ): Record<string, string[]> =>
-  (Object.keys(clusterNamespaceMap) as string[])
-    .filter((cluster) => clusterNamesSet.has(cluster))
-    .reduce<Record<string, string[]>>((acc, cluster) => {
-      const existingNamespaces = clusterNamespaceMap[cluster] ?? []
-      const missing = targetNamespaces.filter((ns) => !existingNamespaces.includes(ns))
-      if (missing.length > 0) acc[cluster] = missing
-      return acc
-    }, {})
+  Array.from(clusterNamesSet).reduce<Record<string, string[]>>((acc, cluster) => {
+    const existingNamespaces = clusterNamespaceMap[cluster] ?? []
+    const missing = targetNamespaces.filter((ns) => !existingNamespaces.includes(ns))
+    if (missing.length > 0) {
+      acc[cluster] = missing
+    }
+    return acc
+  }, {})
 
 interface HandleMissingNamespacesDeps {
   clusterNamespaceMap: Record<string, string[]>

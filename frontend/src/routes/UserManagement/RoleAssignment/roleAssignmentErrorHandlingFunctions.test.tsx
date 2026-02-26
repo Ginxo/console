@@ -34,13 +34,13 @@ const baseRoleAssignment: FlattenedRoleAssignment = {
 const mockT = (key: string, opts?: Record<string, unknown>) => key + (opts ? JSON.stringify(opts) : '')
 
 describe('getMissingNamespacesPerCluster', () => {
-  it('returns empty object when no clusters match', () => {
+  it('includes cluster in clusterNamesSet with all target namespaces missing when cluster is not in clusterNamespaceMap', () => {
     const result = getMissingNamespacesPerCluster(
       { 'cluster-1': ['ns-a'], 'cluster-2': ['ns-b'] },
       ['ns-a', 'ns-b'],
       new Set(['cluster-3'])
     )
-    expect(result).toEqual({})
+    expect(result).toEqual({ 'cluster-3': ['ns-a', 'ns-b'] })
   })
 
   it('returns only missing namespaces per cluster', () => {
@@ -189,8 +189,8 @@ describe('handleMissingNamespaces', () => {
           autoClose: true,
         })
       )
-      const errorCalls = mockAddAlertCallback.mock.calls.filter(
-        (call) => (call[0] as { title?: string }).title === 'Error creating missing project'
+      const errorCalls = (mockAddAlertCallback.mock.calls as unknown[][]).filter(
+        (call) => (call[0] as unknown as { title?: string } | undefined)?.title === 'Error creating missing project'
       )
       expect(errorCalls.length).toBeGreaterThanOrEqual(1)
     })
@@ -227,7 +227,11 @@ describe('handleMissingNamespaces', () => {
 
   describe('edge cases', () => {
     it('handles roleAssignment with undefined targetNamespaces and clusterNames', async () => {
-      const ra = { ...baseRoleAssignment, targetNamespaces: undefined, clusterNames: undefined }
+      const ra = {
+        ...baseRoleAssignment,
+        targetNamespaces: undefined,
+        clusterNames: undefined,
+      } as unknown as FlattenedRoleAssignment
       await handleMissingNamespaces(ra, defaultDeps)
 
       expect(mockAddAlertCallback).toHaveBeenCalledWith(
