@@ -4,9 +4,43 @@ import { act, render, waitFor } from '@testing-library/react'
 import { axe } from 'jest-axe'
 import { Fragment } from 'react'
 import { AcmButton } from '../AcmButton/AcmButton'
-import { AcmAlert, AcmAlertContext, AcmAlertGroup, AcmAlertProvider } from './AcmAlert'
+import { AcmAlert, AcmAlertContext, AcmAlertGroup, AcmAlertProvider, replaceAlertById } from './AcmAlert'
 import type { AcmAlertInfoWithId } from './AcmAlert'
 import { AcmToast, AcmToastContext, AcmToastGroup, AcmToastProvider } from './AcmToast'
+
+describe('replaceAlertById', () => {
+  test('returns the same array when no alert matches the id', () => {
+    const alerts: AcmAlertInfoWithId[] = [
+      { id: 'a', title: 'A' },
+      { id: 'b', title: 'B' },
+    ]
+    const result = replaceAlertById(alerts, { id: 'c', title: 'C' })
+    expect(result).toBe(alerts)
+    expect(result).toEqual([
+      { id: 'a', title: 'A' },
+      { id: 'b', title: 'B' },
+    ])
+  })
+
+  test('replaces the alert with matching id and returns a new array', () => {
+    const alerts: AcmAlertInfoWithId[] = [
+      { id: 'a', title: 'A' },
+      { id: 'b', title: 'B' },
+    ]
+    const result = replaceAlertById(alerts, { id: 'b', title: 'B updated', message: 'msg' })
+    expect(result).not.toBe(alerts)
+    expect(result).toEqual([
+      { id: 'a', title: 'A' },
+      { id: 'b', title: 'B updated', message: 'msg' },
+    ])
+  })
+
+  test('does not mutate the original array', () => {
+    const alerts: AcmAlertInfoWithId[] = [{ id: 'x', title: 'X' }]
+    replaceAlertById(alerts, { id: 'x', title: 'Y' })
+    expect(alerts[0].title).toBe('X')
+  })
+})
 
 describe('AcmAlert', () => {
   test('renders alerts in alert group', async () => {

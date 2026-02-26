@@ -16,6 +16,14 @@ export interface AcmAlertInfo {
 
 export type AcmAlertInfoWithId = Omit<AcmAlertInfo, 'id'> & { id: string }
 
+export const replaceAlertById = (alerts: AcmAlertInfo[], alertToReplace: AcmAlertInfoWithId): AcmAlertInfo[] => {
+  const index = alerts.findIndex((ai) => ai.id === alertToReplace.id)
+  if (index === -1) return alerts
+  const next = [...alerts]
+  next[index] = alertToReplace
+  return next
+}
+
 export interface IAlertContext {
   readonly activeAlerts: AcmAlertInfo[]
   readonly alertInfos: AcmAlertInfo[]
@@ -69,12 +77,8 @@ export function AcmAlertProvider(props: { children: ReactNode; isToast?: boolean
   }, [])
   const modifyAlert = useCallback<(alertInfo: AcmAlertInfoWithId) => AcmAlertInfoWithId>(
     (alertInfo: AcmAlertInfoWithId) => {
-      setVisibleAlerts((alerts) => {
-        const index = alerts.findIndex((ai) => ai.id === alertInfo.id)
-        const newAlertInfos = [...alerts]
-        newAlertInfos[index] = alertInfo
-        return newAlertInfos
-      })
+      setVisibleAlerts((alerts) => replaceAlertById(alerts, alertInfo))
+      setActiveAlerts((alerts) => replaceAlertById(alerts, alertInfo))
       return alertInfo
     },
     []

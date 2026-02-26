@@ -3,7 +3,7 @@
 import { Slide } from '@mui/material'
 import { Alert, AlertActionCloseButton, AlertGroup, AlertProps, Flex } from '@patternfly/react-core'
 import { createContext, CSSProperties, Fragment, ReactNode, useCallback, useContext, useEffect, useState } from 'react'
-import { AcmAlertInfo, AcmAlertInfoWithId, IAlertContext } from './AcmAlert'
+import { AcmAlertInfo, AcmAlertInfoWithId, IAlertContext, replaceAlertById } from './AcmAlert'
 
 /* istanbul ignore next */
 const noop = () => null
@@ -48,12 +48,8 @@ export function AcmToastProvider(props: { children: ReactNode }) {
   }, [])
   const modifyAlert = useCallback<(alertInfo: AcmAlertInfoWithId) => AcmAlertInfoWithId>(
     (alertInfo: AcmAlertInfoWithId) => {
-      setVisibleAlerts((alerts) => {
-        const index = alerts.findIndex((ai) => ai.id === alertInfo.id)
-        const newAlertInfos = [...alerts]
-        newAlertInfos[index] = alertInfo
-        return newAlertInfos
-      })
+      setVisibleAlerts((alerts) => replaceAlertById(alerts, alertInfo))
+      setActiveAlerts((alerts) => replaceAlertById(alerts, alertInfo))
       return alertInfo
     },
     []
