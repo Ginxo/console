@@ -2564,6 +2564,7 @@
   "Risks discovered by OpenShift Insights Advisor": "Risks discovered by OpenShift Insights Advisor",
   "Role": "Role",
   "Role assignment added": "Role assignment added",
+  "Role Assignment being applied": "Role Assignment being applied",
   "Role assignment creation failed": "Role assignment creation failed",
   "Role assignment update failed": "Role assignment update failed",
   "Role assignment updated": "Role assignment updated",
