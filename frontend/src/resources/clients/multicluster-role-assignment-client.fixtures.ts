@@ -1147,7 +1147,9 @@ export const getClustersSortingTestCases: GetClustersDeduplicationTestCase[] = [
 ]
 
 /**
- * Helper to create a PlacementClusters entry with a specific namespace for testing namespace filtering
+ * Helper to create a PlacementClusters entry with a specific namespace for testing namespace filtering.
+ * When clusterSetNames is undefined, the placement has no spec.clusterSets (cluster-name based).
+ * When clusterSetNames is provided, the placement is cluster-set based.
  */
 export const createPlacementClustersWithNamespace = (
   name: string,
@@ -1159,7 +1161,7 @@ export const createPlacementClustersWithNamespace = (
     apiVersion: 'cluster.open-cluster-management.io/v1beta1',
     kind: 'Placement',
     metadata: { name, namespace },
-    spec: { clusterSets: clusterSetNames ?? ['default'] },
+    spec: clusterSetNames !== undefined ? { clusterSets: clusterSetNames } : {},
   },
   clusters,
   clusterSetNames,
