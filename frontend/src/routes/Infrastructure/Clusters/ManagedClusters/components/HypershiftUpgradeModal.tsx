@@ -873,6 +873,7 @@ export function HypershiftUpgradeModal(props: {
                           onToggle={() => setNodepoolsExpanded(!nodepoolsExpanded)}
                           isExpanded={nodepoolsExpanded}
                           aria-label={t('Expand')}
+                          data-testid="nodepoolgroup-toggle"
                           toggleContent={
                             <Checkbox
                               label={t('Cluster node pools')}
