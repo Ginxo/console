@@ -740,6 +740,7 @@ export function HypershiftUpgradeModal(props: {
                       <Checkbox
                         isChecked={controlPlaneChecked}
                         id="controlplane-checkbox"
+                        data-testid="controlplane-checkbox"
                         name={props.controlPlane.name}
                         onChange={() => handleControlPlaneChecked()}
                         isDisabled={controlPlaneCheckboxDisabled}
@@ -756,54 +757,58 @@ export function HypershiftUpgradeModal(props: {
                     {props.controlPlane.distribution?.ocp?.version}
                   </Td>
                   <Td dataLabel={columnNames.newVersion}>
-                    <AcmSelect
-                      id="controlplane-version-dropdown"
-                      onChange={(version) => {
-                        // Handle clearing the dropdown (undefined or empty string)
-                        if (!version) {
-                          setControlPlaneNewVersion(undefined)
-                          return
-                        }
-
-                        setControlPlaneNewVersion(version)
-                        checkNodepoolErrors(version)
-                        checkNodepoolsDisabled(version)
-                        props.nodepools?.forEach((np) => {
-                          if (isTwoVersionsGreater(version, np.status?.version)) {
-                            nodepoolsChecked[np.metadata.name || ''] = true
+                    <div data-testid="controlplane-version-dropdown-label">
+                      <AcmSelect
+                        id="controlplane-version-dropdown"
+                        onChange={(version) => {
+                          // Handle clearing the dropdown (undefined or empty string)
+                          if (!version) {
+                            setControlPlaneNewVersion(undefined)
+                            return
                           }
-                        })
-                        setNodepoolsChecked({ ...nodepoolsChecked })
-                        if (countTrue(nodepoolsChecked) === props.nodepools?.length) {
-                          setNodepoolGroupChecked(true)
-                        }
-                      }}
-                      value={controlPlaneNewVersion || ''}
-                      label=""
-                      maxHeight={'10em'}
-                      isDisabled={!controlPlaneChecked}
-                    >
-                      {availableUpdateKeys.map((version) => {
-                        const hasWarning = hasUpgradeAlert(upgradeableCondition, currentVersion, version)
-                        return (
-                          <SelectOption key={`${version}`} value={version}>
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                width: '100%',
-                              }}
-                            >
-                              <span>{version}</span>
-                              {hasWarning && (
-                                <ExclamationTriangleIcon style={{ color: 'var(--pf-v5-global--warning-color--100)' }} />
-                              )}
-                            </div>
-                          </SelectOption>
-                        )
-                      })}
-                    </AcmSelect>
+
+                          setControlPlaneNewVersion(version)
+                          checkNodepoolErrors(version)
+                          checkNodepoolsDisabled(version)
+                          props.nodepools?.forEach((np) => {
+                            if (isTwoVersionsGreater(version, np.status?.version)) {
+                              nodepoolsChecked[np.metadata.name || ''] = true
+                            }
+                          })
+                          setNodepoolsChecked({ ...nodepoolsChecked })
+                          if (countTrue(nodepoolsChecked) === props.nodepools?.length) {
+                            setNodepoolGroupChecked(true)
+                          }
+                        }}
+                        value={controlPlaneNewVersion || ''}
+                        label=""
+                        maxHeight={'10em'}
+                        isDisabled={!controlPlaneChecked}
+                      >
+                        {availableUpdateKeys.map((version) => {
+                          const hasWarning = hasUpgradeAlert(upgradeableCondition, currentVersion, version)
+                          return (
+                            <SelectOption key={`${version}`} value={version}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  width: '100%',
+                                }}
+                              >
+                                <span>{version}</span>
+                                {hasWarning && (
+                                  <ExclamationTriangleIcon
+                                    style={{ color: 'var(--pf-v5-global--warning-color--100)' }}
+                                  />
+                                )}
+                              </div>
+                            </SelectOption>
+                          )
+                        })}
+                      </AcmSelect>
+                    </div>
                     {showUpgradeAlert ? (
                       <FormHelperText>
                         <ExclamationTriangleIcon
@@ -881,6 +886,7 @@ export function HypershiftUpgradeModal(props: {
                               isChecked={nodepoolGroupChecked}
                               name="nodepoolgroup-checkbox"
                               id="nodepoolgroup-checkbox"
+                              data-testid="nodepoolgroup-checkbox"
                             />
                           }
                         />
