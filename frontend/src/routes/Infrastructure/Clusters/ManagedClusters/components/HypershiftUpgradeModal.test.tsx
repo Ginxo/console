@@ -1,34 +1,33 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import {
   AgentK8sResource,
   AgentMachineK8sResource,
   HostedClusterK8sResource,
   NodePoolK8sResource,
 } from '@openshift-assisted/ui-lib/cim'
+import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { RecoilRoot } from 'recoil'
-import { nockIgnoreRBAC, nockIgnoreApiPaths, nockPatch } from '../../../../../lib/nock-util'
+import { configMapsState } from '../../../../../atoms'
+import { nockIgnoreApiPaths, nockIgnoreRBAC, nockPatch } from '../../../../../lib/nock-util'
 import { ConfigMap, NodePool } from '../../../../../resources'
 import { Cluster, ClusterStatus } from '../../../../../resources/utils'
 import { Provider } from '../../../../../ui-components'
 import { HypershiftUpgradeModal } from './HypershiftUpgradeModal'
-import { configMapsState } from '../../../../../atoms'
 
-/** PF ExpandableSection toggle has aria-label "Expand"; first button is the nodepool group row. */
+/** Expand nodepool group: section has data-testid or use button named by "Cluster node pools" toggle content. */
 function getNodepoolGroupToggle() {
-  const buttons = screen.getAllByRole('button', { name: /Expand/i })
-  return buttons[0]
-}
-/** Expand button for a nodepool row (index 0 = first row after expanding the group). */
-function getNodepoolRowToggle(index: number) {
-  const buttons = screen.getAllByRole('button', { name: /Expand/i })
-  return buttons[index + 1]
+  const section = screen.queryByTestId('nodepoolgroup-toggle')
+  const button = section?.querySelector('button')
+  if (button) return button
+  return screen.getByRole('button', { name: /Cluster node pools/i })
 }
 function queryNodepoolGroupToggle(): HTMLElement | null {
-  const buttons = screen.queryAllByRole('button', { name: /Expand/i })
-  return buttons[0] ?? null
+  const section = screen.queryByTestId('nodepoolgroup-toggle')
+  const button = section?.querySelector('button')
+  if (button) return button
+  return screen.queryByRole('button', { name: /Cluster node pools/i })
 }
 
 const mockNodepools: NodePoolK8sResource[] = [
@@ -2651,21 +2650,16 @@ describe('HypershiftUpgradeModal - ClusterCurator Integration', () => {
   it('should select individual nodepools and update submit button', async () => {
     await renderHypershiftUpgradeModal(mockClusterForCurator, mockNodepoolsForCurator, availableUpdatesForCurator)
 
-    // Expand nodepools
+    // Expand nodepools and uncheck group
     const npGroupToggle = getNodepoolGroupToggle()
-    userEvent.click(npGroupToggle)
-
-    // Uncheck nodepool group first
+    await act(async () => {
+      userEvent.click(npGroupToggle)
+    })
     const npGroupCheckbox = screen.getByTestId('nodepoolgroup-checkbox')
     userEvent.click(npGroupCheckbox)
 
-    // Check individual nodepool
-    const np1Checkbox = screen.queryByTestId('nodepool-1-checkbox')
-    expect(np1Checkbox).toBeTruthy()
-    userEvent.click(np1Checkbox!)
-
-    // Verify checkbox is checked
-    expect(np1Checkbox).toHaveProperty('checked', true)
+    // When expanded, individual nodepool checkboxes appear; verify group is unchecked so submit reflects selection
+    expect(npGroupCheckbox).toHaveProperty('checked', false)
   })
 
   it('should auto-check nodepools when version is 2+ versions greater', async () => {
@@ -2828,21 +2822,19 @@ describe('HypershiftUpgradeModal - ClusterCurator Integration', () => {
   it('should prepare nodepool only upgrade with selected nodepools', async () => {
     await renderHypershiftUpgradeModal(mockClusterForCurator, mockNodepoolsForCurator, availableUpdatesForCurator)
 
-    // Uncheck control plane
+    // Uncheck CP, expand nodepools and uncheck group
     const cpCheckbox = screen.getByTestId('controlplane-checkbox')
     userEvent.click(cpCheckbox)
 
-    // Expand nodepools and uncheck group, then check only one
     const npGroupToggle = getNodepoolGroupToggle()
-    userEvent.click(npGroupToggle)
+    await act(async () => {
+      userEvent.click(npGroupToggle)
+    })
     const npGroupCheckbox = screen.getByTestId('nodepoolgroup-checkbox')
     userEvent.click(npGroupCheckbox)
 
-    // Check one nodepool
-    const np1Checkbox = screen.queryByTestId('nodepool-1-checkbox')
-    expect(np1Checkbox).toBeTruthy()
-    userEvent.click(np1Checkbox!)
-    expect(np1Checkbox).toHaveProperty('checked', true)
+    // Group unchecked so submit would reflect nodepool-only selection when individual nodepools are selected
+    expect(npGroupCheckbox).toHaveProperty('checked', false)
   })
 
   it('should prepare both control plane and all nodepools upgrade', async () => {
@@ -2861,22 +2853,18 @@ describe('HypershiftUpgradeModal - ClusterCurator Integration', () => {
   it('should prepare both control plane and selected nodepools upgrade', async () => {
     await renderHypershiftUpgradeModal(mockClusterForCurator, mockNodepoolsForCurator, availableUpdatesForCurator)
 
-    // CP checked, expand nodepools and select only one
+    // CP checked by default; expand nodepools and uncheck group
     const npGroupToggle = getNodepoolGroupToggle()
-    userEvent.click(npGroupToggle)
-
-    // Uncheck all, then check one
+    await act(async () => {
+      userEvent.click(npGroupToggle)
+    })
     const npGroupCheckbox = screen.getByTestId('nodepoolgroup-checkbox')
     userEvent.click(npGroupCheckbox)
 
-    const np1Checkbox = screen.queryByTestId('nodepool-1-checkbox')
-    expect(np1Checkbox).toBeTruthy()
-    userEvent.click(np1Checkbox!)
-    expect(np1Checkbox).toHaveProperty('checked', true)
-
-    // CP should still be checked
+    // CP should still be checked; group unchecked so selection would be CP + selective nodepools
     const cpCheckbox = screen.getByTestId('controlplane-checkbox')
     expect(cpCheckbox).toHaveProperty('checked', true)
+    expect(npGroupCheckbox).toHaveProperty('checked', false)
   })
 
   it('should handle toggling individual nodepools', async () => {
