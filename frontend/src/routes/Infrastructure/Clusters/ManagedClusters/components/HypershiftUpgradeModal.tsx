@@ -113,7 +113,7 @@ export function HypershiftUpgradeModal(props: {
   const [patchErrors, setPatchErrors] = useState<any[]>([])
   const zeroVersion = '0.0.0'
   const hypershiftNodePoolsToggleId = 'hypershift-nodepools-expandable-section-id'
-  const hypershiftNodePoolsContentId = 'hypershift-nodepools-expandable-section-id'
+  const hypershiftNodePoolsContentId = 'hypershift-nodepools-expandable-content-id'
 
   const { configMapsState } = useSharedAtoms()
   const configMaps = useRecoilValue(configMapsState)
@@ -926,8 +926,8 @@ export function HypershiftUpgradeModal(props: {
                                   isExpanded={isNodepoolToggled(np.metadata.name || '')}
                                   ariaLabel={t('Expand')}
                                   isExpandable={props.controlPlane.hypershift?.agent}
-                                  children={
-                                    props.controlPlane.hypershift?.agent &&
+                                >
+                                  {props.controlPlane.hypershift?.agent &&
                                     getNodepoolAgents(
                                       np as NodePoolK8sResource,
                                       props.agents,
@@ -946,9 +946,8 @@ export function HypershiftUpgradeModal(props: {
                                           </span>
                                         </div>
                                       )
-                                    })
-                                  }
-                                />
+                                    })}
+                                </HypershiftUpgradeModalNodePoolCheckbox>
                               </ExpandableSection>
                             </Td>
                             <Td dataLabel={columnNames.currentVersion}>{np.status?.version}</Td>

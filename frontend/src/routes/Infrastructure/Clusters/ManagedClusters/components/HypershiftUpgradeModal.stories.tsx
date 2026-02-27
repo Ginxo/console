@@ -197,7 +197,6 @@ function HypershiftUpgradeModalWithToggle(args: {
   const handleClose = () => {
     setOpen(false)
     args.close?.()
-    action('close')()
   }
   return (
     <>
