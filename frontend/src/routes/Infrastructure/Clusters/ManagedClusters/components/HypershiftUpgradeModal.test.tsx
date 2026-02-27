@@ -1,20 +1,20 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { act, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import {
   AgentK8sResource,
   AgentMachineK8sResource,
   HostedClusterK8sResource,
   NodePoolK8sResource,
 } from '@openshift-assisted/ui-lib/cim'
+import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { RecoilRoot } from 'recoil'
-import { nockIgnoreRBAC, nockIgnoreApiPaths, nockPatch } from '../../../../../lib/nock-util'
+import { configMapsState } from '../../../../../atoms'
+import { nockIgnoreApiPaths, nockIgnoreRBAC, nockPatch } from '../../../../../lib/nock-util'
 import { ConfigMap, NodePool } from '../../../../../resources'
 import { Cluster, ClusterStatus } from '../../../../../resources/utils'
 import { Provider } from '../../../../../ui-components'
 import { HypershiftUpgradeModal } from './HypershiftUpgradeModal'
-import { configMapsState } from '../../../../../atoms'
 
 /** Expand nodepool group: section has data-testid or use button named by "Cluster node pools" toggle content. */
 function getNodepoolGroupToggle() {
