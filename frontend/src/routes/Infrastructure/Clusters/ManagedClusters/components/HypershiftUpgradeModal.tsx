@@ -921,11 +921,12 @@ export function HypershiftUpgradeModal(props: {
                                   isExpandable={props.controlPlane.hypershift?.agent}
                                 >
                                   {props.controlPlane.hypershift?.agent &&
+                                    props.hostedCluster &&
                                     getNodepoolAgents(
                                       np as NodePoolK8sResource,
                                       props.agents,
                                       props.agentMachines,
-                                      props.hostedCluster!
+                                      props.hostedCluster
                                     ).map((agent) => {
                                       const hostName = agent.spec.hostname || agent.status?.inventory.hostname
                                       return (
