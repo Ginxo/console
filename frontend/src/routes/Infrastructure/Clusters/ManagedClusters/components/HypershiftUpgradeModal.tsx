@@ -104,7 +104,6 @@ export function HypershiftUpgradeModal(props: {
   const [controlPlaneNewVersion, setControlPlaneNewVersion] = useState<string>()
   const [nodepoolsNameTdWidth, setNodepoolsNameTdWidth] = useState<number>()
   const [nodepoolsVersionTdWidth, setNodepoolsVersionTdWidth] = useState<number>()
-  const [controlPlaneCheckboxSpanWidth, setControlPlaneCheckboxSpanWidth] = useState<number>()
   const [controlPlaneError, setControlPlaneError] = useState<boolean>(false)
   const [overallNodepoolVersion, setOverallNodepoolVersion] = useState<string>()
   const [nodepoolGroupDisabled, setNodepoolGroupDisabled] = useState<boolean>(false)
@@ -218,12 +217,6 @@ export function HypershiftUpgradeModal(props: {
   ) {
     setNodepoolsVersionTdWidth(controlPlaneVersionTdRef.current?.offsetWidth)
   }
-
-  const controlPlaneCheckboxSpanRef = useCallback((node: HTMLSpanElement | null) => {
-    if (node) {
-      setControlPlaneCheckboxSpanWidth(node.offsetWidth)
-    }
-  }, [])
 
   const checkNodepoolErrors = useCallback(
     (version?: string) => {
@@ -937,13 +930,7 @@ export function HypershiftUpgradeModal(props: {
                                       const hostName = agent.spec.hostname || agent.status?.inventory.hostname
                                       return (
                                         <div key={hostName}>
-                                          <span
-                                            style={{
-                                              paddingLeft: controlPlaneCheckboxSpanWidth,
-                                            }}
-                                          >
-                                            {hostName}
-                                          </span>
+                                          <span>{hostName}</span>
                                         </div>
                                       )
                                     })}
