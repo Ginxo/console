@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import { RoleAssignmentLabel } from './RoleAssignmentLabel'
 
-describe('RoleAssignmentsHelper', () => {
+describe('RoleAssignmentLabel', () => {
   it.each([[undefined], [[]]])('%s elements', (elements: undefined | string[]) => {
     // Act
     render(<RoleAssignmentLabel numLabel={0} elements={elements} />)
@@ -22,7 +22,7 @@ describe('RoleAssignmentsHelper', () => {
     expect(screen.getByText(/a/i)).toBeInTheDocument()
     expect(screen.getByText(/b/i)).toBeInTheDocument()
     expect(screen.getByText(/b/i)).toBeInTheDocument()
-    expect(screen.queryByText('more')).not.toBeInTheDocument()
+    expect(screen.queryByText(/more/i)).not.toBeInTheDocument()
   })
 
   it('numLabel lower than elements length by 1', () => {
