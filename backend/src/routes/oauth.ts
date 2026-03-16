@@ -30,15 +30,16 @@ export function getOauthInfoPromise() {
       : '.well-known/oauth-authorization-server'
     const oidcIssuerUrl = process.env.OIDC_ISSUER_URL ?? process.env.CLUSTER_API_URL
     if (!oidcIssuerUrl) {
-      return Promise.resolve(handleError('Missing OIDC_ISSUER_URL or CLUSTER_API_URL for OAuth discovery'))
+      oauthInfoPromise = Promise.resolve(handleError('Missing OIDC_ISSUER_URL or CLUSTER_API_URL for OAuth discovery'))
+    } else {
+      const discoveryUrl = new URL(
+        discoveryDocument,
+        oidcIssuerUrl.endsWith('/') ? oidcIssuerUrl : `${oidcIssuerUrl}/`
+      ).toString()
+      oauthInfoPromise = jsonRequest<OAuthInfo>(discoveryUrl).catch((err: Error) => {
+        return handleError(err.message)
+      })
     }
-    const discoveryUrl = new URL(
-      discoveryDocument,
-      oidcIssuerUrl.endsWith('/') ? oidcIssuerUrl : `${oidcIssuerUrl}/`
-    ).toString()
-    oauthInfoPromise = jsonRequest<OAuthInfo>(discoveryUrl).catch((err: Error) => {
-      return handleError(err.message)
-    })
   }
   return oauthInfoPromise
 }
