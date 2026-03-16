@@ -30,7 +30,7 @@ export function getOauthInfoPromise() {
       : '.well-known/oauth-authorization-server'
     const oidcIssuerUrl = process.env.OIDC_ISSUER_URL ?? process.env.CLUSTER_API_URL
     if (!oidcIssuerUrl) {
-      return handleError('Missing OIDC_ISSUER_URL or CLUSTER_API_URL for OAuth discovery')
+      return Promise.resolve(handleError('Missing OIDC_ISSUER_URL or CLUSTER_API_URL for OAuth discovery'))
     }
     const discoveryUrl = new URL(
       discoveryDocument,
@@ -79,8 +79,8 @@ export async function loginCallback(req: Http2ServerRequest, res: Http2ServerRes
     const token = process.env.OIDC_ISSUER_URL ? body.id_token : body.access_token
     if (token) {
       const headers = {
-        'Set-Cookie': `acm-access-token-cookie=${token}; ${
-          process.env.NODE_ENV === 'production' ? 'Secure; ' : ''
+        'Set-Cookie': `acm-access-token-cookie=${token};${
+          process.env.NODE_ENV === 'production' ? ' Secure;' : ''
         } HttpOnly; Path=/`,
         location: process.env.FRONTEND_URL,
       }
