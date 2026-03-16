@@ -17,21 +17,27 @@ let oauthInfoPromise: Promise<OAuthInfo>
 
 export function getOauthInfoPromise() {
   if (oauthInfoPromise === undefined) {
-    const discoveryDocument = process.env.OIDC_ISSUER_URL
-      ? '.well-known/openid-configuration'
-      : '.well-known/oauth-authorization-server'
-    const oidcIssuerUrl = process.env.OIDC_ISSUER_URL ?? process.env.CLUSTER_API_URL
-    const discoveryUrl = new URL(
-      discoveryDocument,
-      oidcIssuerUrl.endsWith('/') ? oidcIssuerUrl : `${oidcIssuerUrl}/`
-    ).toString()
-    oauthInfoPromise = jsonRequest<OAuthInfo>(discoveryUrl).catch((err: Error) => {
-      logger.error({ msg: 'oauth-authorization-server error', error: err.message })
+    const handleError = (error: string) => {
+      logger.error({ msg: 'oauth-authorization-server error', error })
       setDead()
       return {
         authorization_endpoint: '',
         token_endpoint: '',
       }
+    }
+    const discoveryDocument = process.env.OIDC_ISSUER_URL
+      ? '.well-known/openid-configuration'
+      : '.well-known/oauth-authorization-server'
+    const oidcIssuerUrl = process.env.OIDC_ISSUER_URL ?? process.env.CLUSTER_API_URL
+    if (!oidcIssuerUrl) {
+      return handleError('Missing OIDC_ISSUER_URL or CLUSTER_API_URL for OAuth discovery')
+    }
+    const discoveryUrl = new URL(
+      discoveryDocument,
+      oidcIssuerUrl.endsWith('/') ? oidcIssuerUrl : `${oidcIssuerUrl}/`
+    ).toString()
+    oauthInfoPromise = jsonRequest<OAuthInfo>(discoveryUrl).catch((err: Error) => {
+      return handleError(err.message)
     })
   }
   return oauthInfoPromise
