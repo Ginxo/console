@@ -17,13 +17,14 @@ let oauthInfoPromise: Promise<OAuthInfo>
 
 export function getOauthInfoPromise() {
   if (oauthInfoPromise === undefined) {
-    const oidcIssuerUrl = process.env.OIDC_ISSUER_URL
-    const discoveryUrl = oidcIssuerUrl
-      ? new URL(
-          '.well-known/openid-configuration',
-          oidcIssuerUrl.endsWith('/') ? oidcIssuerUrl : `${oidcIssuerUrl}/`
-        ).toString()
-      : `${process.env.CLUSTER_API_URL}/.well-known/oauth-authorization-server`
+    const discoveryDocument = process.env.OIDC_ISSUER_URL
+      ? '.well-known/openid-configuration'
+      : '.well-known/oauth-authorization-server'
+    const oidcIssuerUrl = process.env.OIDC_ISSUER_URL ?? process.env.CLUSTER_API_URL
+    const discoveryUrl = new URL(
+      discoveryDocument,
+      oidcIssuerUrl.endsWith('/') ? oidcIssuerUrl : `${oidcIssuerUrl}/`
+    ).toString()
     oauthInfoPromise = jsonRequest<OAuthInfo>(discoveryUrl).catch((err: Error) => {
       logger.error({ msg: 'oauth-authorization-server error', error: err.message })
       setDead()
