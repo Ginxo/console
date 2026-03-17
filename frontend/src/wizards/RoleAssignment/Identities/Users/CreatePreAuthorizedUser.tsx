@@ -35,6 +35,7 @@ export function CreatePreAuthorizedUser({ onClose, onSuccess }: CreatePreAuthori
         name,
       }),
       type: 'danger',
+      autoClose: true,
     })
   }
 
