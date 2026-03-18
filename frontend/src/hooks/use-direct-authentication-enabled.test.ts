@@ -27,51 +27,42 @@ describe('useIsDirectAuthenticationEnabled', () => {
     mockAuthentications = []
   })
 
-  it('should return true when the cluster Authentication CR has spec.type OIDC', () => {
-    mockAuthentications = [makeAuthentication('cluster', 'OIDC')]
+  it.each<{ description: string; authentications: Authentication[]; expected: boolean }>([
+    {
+      description: 'cluster CR has spec.type OIDC',
+      authentications: [makeAuthentication('cluster', 'OIDC')],
+      expected: true,
+    },
+    {
+      description: 'cluster CR among multiple resources has spec.type OIDC',
+      authentications: [makeAuthentication('other', 'IntegratedOAuth'), makeAuthentication('cluster', 'OIDC')],
+      expected: true,
+    },
+    {
+      description: 'cluster CR has spec.type IntegratedOAuth',
+      authentications: [makeAuthentication('cluster', 'IntegratedOAuth')],
+      expected: false,
+    },
+    {
+      description: 'cluster CR has no spec.type',
+      authentications: [makeAuthentication('cluster')],
+      expected: false,
+    },
+    {
+      description: 'no Authentication CR named cluster exists',
+      authentications: [makeAuthentication('other', 'OIDC')],
+      expected: false,
+    },
+    {
+      description: 'authentications list is empty',
+      authentications: [],
+      expected: false,
+    },
+  ])('should return $expected when $description', ({ authentications, expected }) => {
+    mockAuthentications = authentications
 
     const { result } = renderHook(() => useIsDirectAuthenticationEnabled())
 
-    expect(result.current).toBe(true)
-  })
-
-  it('should return false when the cluster Authentication CR has spec.type IntegratedOAuth', () => {
-    mockAuthentications = [makeAuthentication('cluster', 'IntegratedOAuth')]
-
-    const { result } = renderHook(() => useIsDirectAuthenticationEnabled())
-
-    expect(result.current).toBe(false)
-  })
-
-  it('should return false when the cluster Authentication CR has no spec.type', () => {
-    mockAuthentications = [makeAuthentication('cluster')]
-
-    const { result } = renderHook(() => useIsDirectAuthenticationEnabled())
-
-    expect(result.current).toBe(false)
-  })
-
-  it('should return false when no Authentication CR named cluster exists', () => {
-    mockAuthentications = [makeAuthentication('other', 'OIDC')]
-
-    const { result } = renderHook(() => useIsDirectAuthenticationEnabled())
-
-    expect(result.current).toBe(false)
-  })
-
-  it('should return false when the authentications list is empty', () => {
-    mockAuthentications = []
-
-    const { result } = renderHook(() => useIsDirectAuthenticationEnabled())
-
-    expect(result.current).toBe(false)
-  })
-
-  it('should find the cluster CR among multiple Authentication resources', () => {
-    mockAuthentications = [makeAuthentication('other', 'IntegratedOAuth'), makeAuthentication('cluster', 'OIDC')]
-
-    const { result } = renderHook(() => useIsDirectAuthenticationEnabled())
-
-    expect(result.current).toBe(true)
+    expect(result.current).toBe(expected)
   })
 })
