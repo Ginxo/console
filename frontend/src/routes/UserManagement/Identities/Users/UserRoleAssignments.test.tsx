@@ -163,7 +163,10 @@ describe('UserRoleAssignments', () => {
   })
 
   it('renders UserRoleAssignments component with user found', async () => {
-    ;(useRecoilValue as jest.Mock).mockReturnValueOnce(mockUsers).mockReturnValueOnce(mockMulticlusterRoleAssignments)
+    ;(useRecoilValue as jest.Mock)
+      .mockReturnValueOnce(mockUsers)
+      .mockReturnValueOnce(mockMulticlusterRoleAssignments)
+      .mockReturnValueOnce(mockMulticlusterRoleAssignments)
 
     render(<Component userId="mock-user-alice-trask" />)
 
@@ -177,5 +180,13 @@ describe('UserRoleAssignments', () => {
     expect(screen.getByText(/kubevirt-dev/i)).toBeInTheDocument() // Target namespace
     expect(screen.getByText(/vm-dev/i)).toBeInTheDocument() // Target namespace
     expect(screen.getByText(/networking-dev/i)).toBeInTheDocument() // Target namespace
+  })
+
+  it('renders without crashing when multicluster role assignment state is undefined', async () => {
+    ;(useRecoilValue as jest.Mock).mockReturnValueOnce(mockUsers).mockReturnValueOnce(undefined)
+
+    render(<Component userId="mock-user-alice-trask" />)
+    expect(screen.getByText('Loaded')).toBeInTheDocument()
+    expect(screen.getByText('0')).toBeInTheDocument()
   })
 })
