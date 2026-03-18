@@ -7,6 +7,8 @@ import { tokenExpired } from '../logout'
 import {
   AgentClusterInstallApiVersion,
   AgentClusterInstallKind,
+  AuthenticationApiVersion,
+  AuthenticationKind,
   AgentKind,
   AgentKindVersion,
   AgentMachineApiVersion,
@@ -121,6 +123,7 @@ import { getBackendUrl, getRequest } from '../resources/utils'
 import {
   agentClusterInstallsState,
   agentMachinesState,
+  authenticationsState,
   agentServiceConfigsState,
   agentsState,
   ansibleJobState,
@@ -191,6 +194,7 @@ export function LoadData(props: { children?: ReactNode }) {
   const { loadCompleted, setLoadStarted, setLoadCompleted } = useContext(PluginDataContext)
   const [eventsLoaded, setEventsLoaded] = useState(false)
 
+  const setAuthentications = useSetRecoilState(authenticationsState)
   const setAgentClusterInstalls = useSetRecoilState(agentClusterInstallsState)
   const setAgentMachinesState = useSetRecoilState(agentMachinesState)
   const setAgents = useSetRecoilState(agentsState)
@@ -300,6 +304,7 @@ export function LoadData(props: { children?: ReactNode }) {
     addSetter(AgentServiceConfigKindVersion, AgentServiceConfigKind, setAgentServiceConfigs)
     addSetter(AnsibleJobApiVersion, AnsibleJobKind, setAnsibleJobs)
     addSetter(ApplicationApiVersion, ApplicationKind, setApplicationsState)
+    addSetter(AuthenticationApiVersion, AuthenticationKind, setAuthentications)
     addSetter(BareMetalHostApiVersion, BareMetalHostKind, setBareMetalHosts)
     addSetter(CertificateSigningRequestApiVersion, CertificateSigningRequestKind, setCertificateSigningRequests)
     addSetter(ChannelApiVersion, ChannelKind, setChannelsState)
@@ -351,6 +356,7 @@ export function LoadData(props: { children?: ReactNode }) {
 
     return { setters, mappers, caches }
   }, [
+    setAuthentications,
     setAgentClusterInstalls,
     setAgentMachinesState,
     setAgents,

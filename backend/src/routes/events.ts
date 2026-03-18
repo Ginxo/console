@@ -188,6 +188,7 @@ const definitions: IWatchOptions[] = [
   { kind: 'Application', apiVersion: 'argoproj.io/v1alpha1', isPolled: true },
   { kind: 'ApplicationSet', apiVersion: 'argoproj.io/v1alpha1', isPolled: true },
   { kind: 'ArgoCD', apiVersion: 'argoproj.io/v1alpha1' },
+  { kind: 'Authentication', apiVersion: 'config.openshift.io/v1' },
   { kind: 'Infrastructure', apiVersion: 'config.openshift.io/v1' },
   {
     kind: 'CertificateSigningRequest',

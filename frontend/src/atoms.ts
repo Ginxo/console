@@ -19,6 +19,7 @@ import { atom, useRecoilValue } from 'recoil'
 import {
   AnsibleJob,
   Application,
+  Authentication,
   CertificateSigningRequest,
   Channel,
   ClusterClaim,
@@ -75,6 +76,8 @@ function AtomMap<T>() {
 export const THROTTLE_EVENTS_DELAY = 500
 
 export const managedClusterAddonsState = AtomMap<ManagedClusterAddOn>()
+
+export const authenticationsState = AtomArray<Authentication>()
 
 export const agentClusterInstallsState = AtomArray<AgentClusterInstallK8sResource>()
 export const agentMachinesState = AtomArray<AgentMachineK8sResource>()
