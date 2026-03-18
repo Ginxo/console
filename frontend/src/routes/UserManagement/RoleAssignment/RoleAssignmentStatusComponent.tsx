@@ -2,7 +2,6 @@
 import {
   Button,
   ExpandableSection,
-  ExpandableSectionVariant,
   Label,
   Popover,
   PopoverPosition,
@@ -221,16 +220,15 @@ const RoleAssignmentStatusComponent = ({
           icon={<ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />}
           label={t('Error')}
           bodyContent={
-            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-              <ExpandableSection
-                variant={ExpandableSectionVariant.truncate}
-                toggleText={isErrorExpanded ? t('Show less') : t('Show more')}
-                onToggle={onErrorToggle}
-                isExpanded={isErrorExpanded}
-              >
+            <ExpandableSection
+              toggleText={isErrorExpanded ? t('Show less') : t('Show more')}
+              onToggle={onErrorToggle}
+              isExpanded={isErrorExpanded}
+            >
+              <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
                 {roleAssignment.status?.message ?? t('Not available')}
-              </ExpandableSection>
-            </div>
+              </div>
+            </ExpandableSection>
           }
           {...commonStatusTooltipProps}
         />
