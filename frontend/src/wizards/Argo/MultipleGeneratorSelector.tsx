@@ -32,6 +32,7 @@ import { useValidation } from '../../hooks/useValidation'
 import { GitRevisionSelect } from './common/GitRevisionSelect'
 import { IPlacement } from '../common/resources/IPlacement'
 import { useShowValidation } from '@patternfly-labs/react-form-wizard/lib/src/contexts/ShowValidationProvider'
+import { Secret } from '../../resources'
 
 const URL = '{{.url}}'
 const CLUSTER = '{{.cluster}}'
@@ -42,9 +43,16 @@ const DESTINATION_NAME_PATH_NAMESPACE = 'spec.template.spec.destination.namespac
 const DESTINATION_NAME_PATH_SERVER = 'spec.template.spec.destination.server'
 const CDR_PLACEMENT_PATH_SUFFIX = '.labelSelector.matchLabels.cluster\\.open-cluster-management\\.io/placement'
 
+export type PrevGenState = {
+  hasGitGen?: boolean
+  hasListGen?: boolean
+  hasCDRGen?: boolean
+  lastSetDestinationNamespace?: string
+}
+
 export interface CrossGeneratorSyncProps {
-  prevGenState: React.MutableRefObject<{ hasGitGen?: boolean; hasListGen?: boolean; hasCDRGen?: boolean }>
-  onGeneratorStateChange?: (state: { hasGitGen?: boolean; hasListGen?: boolean; hasCDRGen?: boolean }) => void
+  prevGenState: React.MutableRefObject<PrevGenState>
+  onGeneratorStateChange?: (state: PrevGenState) => void
   defaultData?: IResource[] | unknown[]
   generatorPath: MutableRefObject<string>
 }
@@ -57,6 +65,7 @@ export interface MultipleGeneratorSelectorProps {
   gitGeneratorRepos: { urls: string[]; versions: string[]; paths: string[] }
   disableForm: boolean
   generatorPath: MutableRefObject<string>
+  secrets: Secret[]
 }
 
 export function MultipleGeneratorSelector(props: MultipleGeneratorSelectorProps) {
@@ -99,7 +108,7 @@ function GeneratorCollapsedContent() {
 }
 
 function GeneratorInputForm(props: MultipleGeneratorSelectorProps) {
-  const { gitGeneratorRepos, channels, disableForm } = props
+  const { gitGeneratorRepos, channels, disableForm, secrets } = props
   // this is an array dependency in Wiz which doesn't compare by stringify
   // so if you change the array object, react thinks the value changed
   // which causes infinite loop
@@ -148,6 +157,7 @@ function GeneratorInputForm(props: MultipleGeneratorSelectorProps) {
           path="git.repoURL"
           target="git.revision"
           revisions={gitGeneratorRepos.versions}
+          secrets={secrets}
         />
         <WizMultiSelect
           label={t('Directory paths')}
@@ -438,6 +448,20 @@ export function CrossGeneratorSync(props: CrossGeneratorSyncProps) {
     const hasCDRGen = types.has('clusterDecisionResource')
     const isInitialSync = prevGenState.current.hasGitGen === undefined && prevGenState.current.hasListGen === undefined
 
+    // fixup destination namespace with current appName unless the user has changed
+    // it since the last sync
+    const currentDestNamespace = get(appSet, DESTINATION_NAME_PATH_NAMESPACE)
+    const shouldFixDestNamespace =
+      !!appName &&
+      appName !== currentDestNamespace &&
+      (currentDestNamespace === prevGenState.current.lastSetDestinationNamespace ||
+        currentDestNamespace === '' ||
+        !prevGenState.current.lastSetDestinationNamespace)
+    if (shouldFixDestNamespace) {
+      fix(appSet, DESTINATION_NAME_PATH_NAMESPACE, appName)
+      prevGenState.current.lastSetDestinationNamespace = appName
+    }
+
     // Handle git generator
     if (hasGitGen) {
       if (
@@ -449,7 +473,8 @@ export function CrossGeneratorSync(props: CrossGeneratorSyncProps) {
         fix(appSet, DESTINATION_NAME_PATH_NAMESPACE, `${PATH_BASENAME}`)
       }
     } else if (!isInitialSync && prevGenState.current.hasGitGen !== hasGitGen) {
-      fix(appSet, DESTINATION_NAME_PATH_NAMESPACE, '')
+      fix(appSet, DESTINATION_NAME_PATH_NAMESPACE, appName)
+      prevGenState.current.lastSetDestinationNamespace = appName
     }
 
     // Handle list generator
@@ -520,7 +545,12 @@ export function CrossGeneratorSync(props: CrossGeneratorSyncProps) {
       }
     }
 
-    prevGenState.current = { hasGitGen, hasListGen, hasCDRGen }
+    prevGenState.current = {
+      ...prevGenState.current,
+      hasGitGen,
+      hasListGen,
+      hasCDRGen,
+    }
     onGeneratorStateChange?.(prevGenState.current)
 
     if (shouldUpdate) {

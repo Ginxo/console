@@ -196,19 +196,23 @@ export async function getAppSetTopology(
   /////////////////////////////////////////////
   ////  APPLICATION RESOURCE NODES /////////////////
   /////////////////////////////////////////////
-  const visibleAppCount = Object.entries(applicationResourceMap).filter(
-    ([appNameClusterKey]) => !(activeApplications && !activeApplications.includes(appNameClusterKey.split('--')[0]))
-  ).length
-  let parentNodeId = clusterId
-  Object.entries(applicationResourceMap).forEach(([appNameClusterKey, resources]) => {
-    const [appName, clusterName] = appNameClusterKey.split('--')
-    // if there are multiple visible applications, insert an application node above the resources
-    // (skip when only one application node would be created, including after filtering)
+  const visibleAppCount = Object.entries(applicationResourceMap).reduce(
+    (count, [appName]) => count + (activeApplications && !activeApplications.includes(appName) ? 0 : 1),
+    0
+  )
+  Object.entries(applicationResourceMap).forEach(([appName, clusterMap]) => {
     const isApplicationFiltered =
       applicationNames.length > 0 && activeApplications && !activeApplications.includes(appName)
-    if (applicationNames.length > 0 && visibleAppCount > 1 && !isApplicationFiltered) {
-      // Has multiple visible applications - create application node
-      parentNodeId = `member--application--${clusterName}--${appName}`
+    if (isApplicationFiltered) {
+      return
+    }
+    // One TopologyNode per appName: clusters that have this app (optionally filtered by active)
+    const appClusterNames = Object.keys(clusterMap).filter(
+      (cn) => !clusterNames || clusterNames.length === 0 || clusterNames.includes(cn)
+    )
+    const parentNodeId =
+      applicationNames.length > 0 && visibleAppCount > 1 ? `member--application--${namespace}--${appName}` : clusterId
+    if (applicationNames.length > 0 && visibleAppCount > 1) {
       const healthStatus = appStatusByNameMap[`${name}-${appName}`]?.health.status || 'Healthy'
       const appNode: TopologyNode = {
         name: appName,
@@ -219,6 +223,11 @@ export async function getAppSetTopology(
         specs: {
           isDesign: false,
           clustersNames: clusterNames,
+          ...(appClusterNames.length > 1 && {
+            resources: appClusterNames,
+            resourceCount: appClusterNames.length,
+          }),
+          applicationName: appName,
           raw: {
             apiVersion: 'argoproj.io/v1alpha1',
             kind: 'Application',
@@ -241,14 +250,17 @@ export async function getAppSetTopology(
         type: '',
       })
     }
-    if (!isApplicationFiltered) {
-      // Collect resource types
+    // Concatenate all resources from all clusters for this app (each resource gets its cluster)
+    const allResourcesForApp: ResourceItem[] = []
+    Object.entries(clusterMap).forEach(([clusterName, resources]) => {
+      if (activeClusters?.length && !activeClusters.includes(clusterName)) {
+        return
+      }
       const types = getResourceTypes(resources as Record<string, unknown>[])
       types.forEach((type) => allApplicationTypes.add(type))
-
-      // Process and create resource nodes under the cluster or application node
-      processResources(resources, parentNodeId, clusterNames, hubClusterName, activeTypes ?? [], links, nodes)
-    }
+      resources.forEach((r: any) => allResourcesForApp.push({ ...r, cluster: clusterName }))
+    })
+    processResources(allResourcesForApp, parentNodeId, appClusterNames, hubClusterName, activeTypes ?? [], links, nodes)
   })
 
   // Set all resource types in toolbar
@@ -275,7 +287,7 @@ async function getAppSetResources(application: ApplicationModel) {
   const sortedAllClusterNames = [...allClusterNames].sort((a, b) => b.length - a.length)
 
   const applicationNameSet = new Set<string>()
-  const applicationResourceMap: Record<string, ResourceItem[]> = {}
+  const applicationResourceMap: Record<string, Record<string, ResourceItem[]>> = {}
 
   function mapRelatedResources(compositeName: string, resourceList: any) {
     // Remove appset name prefix to get namePart
@@ -288,12 +300,14 @@ async function getAppSetResources(application: ApplicationModel) {
 
     // Extract application name by stripping cluster name from namePart
     const appName = clusterName ? namePart.replace(clusterName, '').replaceAll(/(?:^-)|(?:-$)/g, '') : namePart
+    const keyAppName = appName || name
     if (appName) {
       applicationNameSet.add(appName)
-      applicationResourceMap[`${appName}--${clusterName ?? ''}`] = resourceList
-    } else {
-      applicationResourceMap[`${name}--${clusterName ?? ''}`] = resourceList
     }
+    if (!applicationResourceMap[keyAppName]) {
+      applicationResourceMap[keyAppName] = {}
+    }
+    applicationResourceMap[keyAppName][clusterName ?? ''] = resourceList
   }
 
   if (isAppSetPullModel) {
@@ -380,14 +394,18 @@ function processResources(
   links: TopologyLink[],
   nodes: TopologyNode[]
 ): void {
-  // clone resources for each cluster
+  // Use resources as-is when each already has cluster set (e.g. concatenated from multiple clusters)
   const allResources: ResourceItem[] = []
-
-  parentClusterNames.forEach((clusterName: string) => {
-    resources.forEach((resource: any) => {
-      allResources.push({ ...resource, cluster: clusterName })
+  const resourcesHaveCluster = resources.length > 0 && resources.every((r: any) => r.cluster != null)
+  if (resourcesHaveCluster) {
+    allResources.push(...(resources as ResourceItem[]))
+  } else {
+    parentClusterNames.forEach((clusterName: string) => {
+      resources.forEach((resource: any) => {
+        allResources.push({ ...resource, cluster: clusterName })
+      })
     })
-  })
+  }
 
   // create nodes for each resource
   processMultiples(allResources).forEach((deployable: Record<string, unknown>) => {
@@ -402,12 +420,14 @@ function processResources(
       resources: deployableResources,
     } = typedDeployable
     const type = kind.toLowerCase()
+    // Use cluster from deployable when present (e.g. concatenated resources from multiple clusters)
+    const deployableCluster =
+      (typedDeployable as any).cluster ??
+      (deployableResources as any)?.[0]?.cluster ??
+      getClusterName(parentId, hubClusterName)
 
     // Generate unique member ID for the deployable resource
-    const memberId = `member--member--deployable--member--clusters--${getClusterName(
-      parentId,
-      hubClusterName
-    )}--${type}--${deployableNamespace}--${deployableName}`
+    const memberId = `member--member--deployable--member--clusters--${deployableCluster}--${type}--${deployableNamespace}--${deployableName}`
 
     // Create raw resource object with metadata
     const raw: any = {
@@ -475,23 +495,24 @@ function processResources(
  * @param t - Translation function
  * @param hubClusterName - Hub cluster name
  */
-export const openArgoCDEditor = (
+export const openArgoCDURL = (
   cluster: string,
   namespace: string,
   name: string,
   toggleLoading: () => void,
   t: TFunction,
-  hubClusterName: string
+  hubClusterName: string,
+  targetPath?: string
 ): void => {
   if (cluster === hubClusterName) {
     // Handle local hub cluster
     toggleLoading()
-    getArgoRoute(name, namespace, cluster, undefined, hubClusterName)
+    getArgoRoute(name, namespace, cluster, undefined, hubClusterName, targetPath)
     toggleLoading()
   } else {
     // Handle remote managed cluster
     toggleLoading()
-    getArgoRouteFromSearch(name, namespace, cluster, t, hubClusterName)
+    getArgoRouteFromSearch(name, namespace, cluster, t, hubClusterName, targetPath)
     toggleLoading()
   }
 }
@@ -511,7 +532,8 @@ const getArgoRoute = async (
   appNamespace: string,
   cluster: string,
   managedclusterviewdata: ManagedClusterViewData | undefined,
-  hubClusterName: string
+  hubClusterName: string,
+  targetPath?: string
 ): Promise<void> => {
   let routes: any[]
   let argoRoute: RouteObject | undefined
@@ -552,7 +574,7 @@ const getArgoRoute = async (
       }
 
       if (argoRoute) {
-        openArgoEditorWindow(argoRoute, appName)
+        openArgoWindow(argoRoute, appName, targetPath)
       }
     }
   } else {
@@ -570,7 +592,7 @@ const getArgoRoute = async (
         if ('errorMessage' in res) {
           // Handle error case - could add error handling here
         } else {
-          openArgoEditorWindow(res, appName)
+          openArgoWindow(res, appName, targetPath)
         }
       })
       .catch((err) => {
@@ -658,7 +680,8 @@ const getArgoRouteFromSearch = async (
   appNamespace: string,
   cluster: string,
   t: TFunction,
-  hubClusterName: string
+  hubClusterName: string,
+  targetPath?: string
 ): Promise<void> => {
   // Build search query for Argo CD routes
   const query: SearchQuery = convertStringToQuery(
@@ -719,7 +742,8 @@ const getArgoRouteFromSearch = async (
           kind: 'Route',
           apiVersion: 'route.openshift.io/v1',
         },
-        hubClusterName
+        hubClusterName,
+        targetPath
       )
     }
   } catch (error) {
@@ -734,11 +758,13 @@ const getArgoRouteFromSearch = async (
  * @param route - Route object containing host and TLS information
  * @param appName - Application name to navigate to
  */
-const openArgoEditorWindow = (route: RouteObject, appName: string): void => {
+const openArgoWindow = (route: RouteObject, appName: string, targetPath?: string): void => {
   const hostName = route.spec?.host ?? 'unknown'
   const transport = route.spec?.tls ? 'https' : 'http'
-  const argoURL = `${transport}://${hostName}/applications`
-  window.open(`${argoURL}/${appName}`, '_blank')
+  const url = targetPath
+    ? `${transport}://${hostName}${targetPath}`
+    : `${transport}://${hostName}/applications/${appName}`
+  window.open(url, '_blank')
 }
 
 /**
