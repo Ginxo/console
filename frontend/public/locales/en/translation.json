@@ -2039,7 +2039,7 @@
   "Minus": "Minus",
   "Minutes (m)": "Minutes (m)",
   "Missing projects created": "Missing projects created",
-  "Missing projects for {{name}} have been successfully created.": "Missing projects for {{name}} have been successfully created.",
+  "Missing projects have been successfully created.": "Missing projects have been successfully created.",
   "Missing rule that generates this resource.": "Missing rule that generates this resource.",
   "Moderate": "Moderate",
   "More info": "More info",

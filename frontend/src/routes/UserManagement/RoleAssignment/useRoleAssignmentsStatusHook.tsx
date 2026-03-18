@@ -98,9 +98,7 @@ const useRoleAssignmentsStatusHook = () => {
       } else {
         addAlert({
           title: t('Missing projects created'),
-          message: t('Missing projects for {{name}} have been successfully created.', {
-            name: roleAssignmentToProcess.name,
-          }),
+          message: t('Missing projects have been successfully created.'),
           type: 'success',
           autoClose: true,
         })
