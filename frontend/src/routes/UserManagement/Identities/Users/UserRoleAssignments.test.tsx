@@ -3,26 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom-v5-compat'
 import { RecoilRoot } from 'recoil'
 import { nockIgnoreApiPaths, nockIgnoreRBAC } from '../../../../lib/nock-util'
-import { User } from '../../../../resources/rbac'
-import { UserRoleAssignments } from './UserRoleAssignments'
-import { useRecoilValue } from '../../../../shared-recoil'
 import { MulticlusterRoleAssignmentNamespace } from '../../../../resources'
 import { FlattenedRoleAssignment } from '../../../../resources/clients/model/flattened-role-assignment'
-
-const mockUsers: User[] = [
-  {
-    apiVersion: 'user.openshift.io/v1',
-    kind: 'User',
-    metadata: {
-      name: 'mock-user-alice-trask',
-      uid: 'mock-user-alice-trask',
-      creationTimestamp: '2023-01-01T00:00:00Z',
-    },
-    fullName: 'Alice Trask',
-    identities: ['alice-trask:oauth'],
-    groups: ['developers'],
-  },
-]
+import { useRecoilValue } from '../../../../shared-recoil'
+import { UserRoleAssignments } from './UserRoleAssignments'
 
 const mockMulticlusterRoleAssignments = [
   {
