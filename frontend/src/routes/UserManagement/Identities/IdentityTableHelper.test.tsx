@@ -851,5 +851,4 @@ describe('IdentityTableHelper', () => {
       expect(groupRadio).toHaveAttribute('name', 'radio-group-uid-789')
     })
   })
-
 })

@@ -100,7 +100,10 @@ describe('UserPage', () => {
       ...mockUser,
       fullName: undefined,
     }
-    mockUseRecoilValue.mockReturnValueOnce([userWithoutFullName]).mockReturnValueOnce([]).mockReturnValueOnce(mockGroups)
+    mockUseRecoilValue
+      .mockReturnValueOnce([userWithoutFullName])
+      .mockReturnValueOnce([])
+      .mockReturnValueOnce(mockGroups)
 
     render(<Component />)
 

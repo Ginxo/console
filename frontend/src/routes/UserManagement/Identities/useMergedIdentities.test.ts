@@ -281,8 +281,7 @@ describe('useMergedIdentities', () => {
       })
 
       const { result } = renderHook(() => useMergedUsers())
-      const groupNames = result.current.filter((u) => u.kind === 'Group')
-      expect(groupNames).toHaveLength(0)
+      expect(result.current.every((u) => u.kind === 'User')).toBe(true)
     })
   })
 
@@ -372,8 +371,7 @@ describe('useMergedIdentities', () => {
       })
 
       const { result } = renderHook(() => useMergedGroups())
-      const userEntries = result.current.filter((g) => g.kind === 'User')
-      expect(userEntries).toHaveLength(0)
+      expect(result.current.every((g) => g.kind === 'Group')).toBe(true)
     })
   })
 })
