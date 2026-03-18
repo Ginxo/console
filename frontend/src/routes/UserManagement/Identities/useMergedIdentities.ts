@@ -58,7 +58,7 @@ export function useMergedUsers(): User[] {
   return useMemo(() => {
     const existingNames = new Set(rbacUsers?.map((u) => u.metadata.name).filter(Boolean) as string[])
     const mraUsers = usersFromMulticlusterRoleAssignments(mras, existingNames)
-    return [...(rbacUsers ?? []), ...mraUsers].toSorted((a, b) =>
+    return [...(rbacUsers ?? []), ...mraUsers].sort((a, b) =>
       compareStrings(a.metadata.name ?? '', b.metadata.name ?? '')
     )
   }, [rbacUsers, mras])
@@ -71,7 +71,7 @@ export function useMergedGroups(): Group[] {
   return useMemo(() => {
     const existingNames = new Set(groupsData?.map((g) => g.metadata.name).filter(Boolean) as string[])
     const mraGroups = groupsFromMulticlusterRoleAssignments(mras, existingNames)
-    return [...(groupsData ?? []), ...mraGroups].toSorted((a, b) =>
+    return [...(groupsData ?? []), ...mraGroups].sort((a, b) =>
       compareStrings(a.metadata.name ?? '', b.metadata.name ?? '')
     )
   }, [groupsData, mras])
