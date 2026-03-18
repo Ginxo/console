@@ -84,6 +84,7 @@ jest.mock('../../../../shared-recoil', () => ({
   useRecoilValue: jest.fn(),
   useSharedAtoms: jest.fn(() => ({
     usersState: 'usersState',
+    multiclusterRoleAssignmentState: 'multiclusterRoleAssignmentState',
     placementsState: 'placementsState',
     placementDecisionsState: 'placementDecisionsState',
   })),
@@ -163,10 +164,12 @@ describe('UserRoleAssignments', () => {
   })
 
   it('renders UserRoleAssignments component with user found', async () => {
-    ;(useRecoilValue as jest.Mock)
-      .mockReturnValueOnce(mockUsers)
-      .mockReturnValueOnce(mockMulticlusterRoleAssignments)
-      .mockReturnValueOnce(mockMulticlusterRoleAssignments)
+    ;(useRecoilValue as jest.Mock).mockImplementation((atom: string) => {
+      if (atom === 'multiclusterRoleAssignmentState') return mockMulticlusterRoleAssignments
+      if (atom === 'placementsState') return []
+      if (atom === 'placementDecisionsState') return []
+      return undefined
+    })
 
     render(<Component userId="mock-user-alice-trask" />)
 
@@ -183,8 +186,12 @@ describe('UserRoleAssignments', () => {
   })
 
   it('renders without crashing when multicluster role assignment state is undefined', async () => {
-    ;(useRecoilValue as jest.Mock).mockReturnValueOnce(mockUsers).mockReturnValueOnce(undefined)
-
+    ;(useRecoilValue as jest.Mock).mockImplementation((atom: string) => {
+      if (atom === 'multiclusterRoleAssignmentState') return undefined
+      if (atom === 'placementsState') return []
+      if (atom === 'placementDecisionsState') return []
+      return undefined
+    })
     render(<Component userId="mock-user-alice-trask" />)
     expect(screen.getByText('Loaded')).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
