@@ -171,4 +171,15 @@ describe('GroupUsers', () => {
     renderWithCtx()
     expect(screen.getByText('test-user')).toBeInTheDocument()
   })
+
+  it('renders alert when group is from OIDC', () => {
+    const oidcGroup = createGroup({ isOIDC: true })
+    setCtx({ group: oidcGroup, users: mockUsers })
+    renderWithCtx()
+
+    expect(screen.getByText("Can't display this information")).toBeInTheDocument()
+    expect(
+      screen.getByText("The identity is coming from external IDP and this information can't be displayed")
+    ).toBeInTheDocument()
+  })
 })

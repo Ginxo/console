@@ -3,9 +3,9 @@ import { useCallback, useMemo } from 'react'
 import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { Group } from '../../../../resources/rbac'
-import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
-import { AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
+import { AcmEmptyState, AcmTable } from '../../../../ui-components'
 import { groupsTableColumns, useFilters } from '../IdentityTableHelper'
+import { useMergedGroups } from '../useMergedIdentities'
 
 interface GroupsTableProps {
   hiddenColumns?: string[]
@@ -21,12 +21,7 @@ const GroupsTable = ({
   setSelectedGroup,
 }: GroupsTableProps) => {
   const { t } = useTranslation()
-
-  const { groupsState } = useSharedAtoms()
-  const groupsData = useRecoilValue(groupsState)
-  const groups = useMemo(() => {
-    return groupsData?.toSorted((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? '')) ?? []
-  }, [groupsData])
+  const groups = useMergedGroups()
 
   const handleRadioSelect = useCallback(
     (uid: string) => {

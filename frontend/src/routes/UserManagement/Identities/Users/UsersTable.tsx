@@ -3,9 +3,9 @@ import { useCallback, useMemo } from 'react'
 import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { User } from '../../../../resources/rbac'
-import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
-import { AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
+import { AcmEmptyState, AcmTable } from '../../../../ui-components'
 import { useFilters, usersTableColumns } from '../IdentityTableHelper'
+import { useMergedUsers } from '../useMergedIdentities'
 
 interface UsersTableProps {
   hiddenColumns?: string[]
@@ -16,11 +16,7 @@ interface UsersTableProps {
 
 const UsersTable = ({ hiddenColumns, areLinksDisplayed = true, selectedUser, setSelectedUser }: UsersTableProps) => {
   const { t } = useTranslation()
-  const { usersState } = useSharedAtoms()
-  const rbacUsers = useRecoilValue(usersState)
-  const users = useMemo(() => {
-    return rbacUsers?.toSorted((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? '')) ?? []
-  }, [rbacUsers])
+  const users = useMergedUsers()
 
   const handleRadioSelect = useCallback(
     (uid: string) => {

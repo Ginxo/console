@@ -99,11 +99,12 @@ describe('GroupPage', () => {
     mockUseSharedAtoms.mockReturnValue({
       usersState: {} as any,
       groupsState: {} as any,
+      multiclusterRoleAssignmentState: {} as any,
     } as any)
   })
 
   test('should render group page with data', async () => {
-    mockUseRecoilValue.mockReturnValueOnce(mockGroups).mockReturnValueOnce(mockUsers)
+    mockUseRecoilValue.mockReturnValueOnce(mockGroups).mockReturnValueOnce([]).mockReturnValueOnce(mockUsers)
 
     render(<Component />)
 
@@ -124,7 +125,7 @@ describe('GroupPage', () => {
   })
 
   test('should render group page with navigation tabs', async () => {
-    mockUseRecoilValue.mockReturnValueOnce(mockGroups).mockReturnValueOnce(mockUsers)
+    mockUseRecoilValue.mockReturnValueOnce(mockGroups).mockReturnValueOnce([]).mockReturnValueOnce(mockUsers)
 
     render(<Component />)
 
@@ -150,7 +151,7 @@ describe('GroupPage', () => {
   })
 
   test('should find group by UID', async () => {
-    mockUseRecoilValue.mockReturnValueOnce(mockGroups).mockReturnValueOnce(mockUsers)
+    mockUseRecoilValue.mockReturnValueOnce(mockGroups).mockReturnValueOnce([]).mockReturnValueOnce(mockUsers)
 
     render(<Component groupId="kubevirt-admins" />)
 

@@ -69,6 +69,7 @@ describe('UserPage', () => {
     mockUseSharedAtoms.mockReturnValue({
       usersState: {} as any,
       groupsState: {} as any,
+      multiclusterRoleAssignmentState: {} as any,
     } as any)
   })
 
@@ -82,7 +83,7 @@ describe('UserPage', () => {
   })
 
   test('should render user page with navigation tabs', () => {
-    mockUseRecoilValue.mockReturnValueOnce([mockUser]).mockReturnValueOnce(mockGroups)
+    mockUseRecoilValue.mockReturnValueOnce([mockUser]).mockReturnValueOnce([]).mockReturnValueOnce(mockGroups)
 
     render(<Component />)
 
@@ -99,7 +100,7 @@ describe('UserPage', () => {
       ...mockUser,
       fullName: undefined,
     }
-    mockUseRecoilValue.mockReturnValueOnce([userWithoutFullName]).mockReturnValueOnce(mockGroups)
+    mockUseRecoilValue.mockReturnValueOnce([userWithoutFullName]).mockReturnValueOnce([]).mockReturnValueOnce(mockGroups)
 
     render(<Component />)
 
@@ -108,7 +109,7 @@ describe('UserPage', () => {
   })
 
   test('should find user by UID', () => {
-    mockUseRecoilValue.mockReturnValueOnce([mockUser]).mockReturnValueOnce(mockGroups)
+    mockUseRecoilValue.mockReturnValueOnce([mockUser]).mockReturnValueOnce([]).mockReturnValueOnce(mockGroups)
 
     render(<Component userId="test-user-uid" />)
 

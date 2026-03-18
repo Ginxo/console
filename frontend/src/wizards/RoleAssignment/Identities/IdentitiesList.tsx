@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { Group, User } from '../../../resources/rbac'
 import { GroupsTable } from '../../../routes/UserManagement/Identities/Groups/GroupsTable'
+import { useMergedGroups, useMergedUsers } from '../../../routes/UserManagement/Identities/useMergedIdentities'
 import { UsersTable } from '../../../routes/UserManagement/Identities/Users/UsersTable'
-import { useRecoilValue, useSharedAtoms } from '../../../shared-recoil'
 import { CreatePreAuthorizedUser } from './Users/CreatePreAuthorizedUser'
 
 interface IdentitiesListProps {
@@ -16,9 +16,8 @@ interface IdentitiesListProps {
 
 export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIdentity }: IdentitiesListProps = {}) {
   const { t } = useTranslation()
-  const { usersState, groupsState } = useSharedAtoms()
-  const users = useRecoilValue(usersState)
-  const groups = useRecoilValue(groupsState)
+  const users = useMergedUsers()
+  const groups = useMergedGroups()
 
   const [activeTabKey, setActiveTabKey] = useState<string | number>(
     initialSelectedIdentity?.kind === 'Group' ? 'groups' : 'users'

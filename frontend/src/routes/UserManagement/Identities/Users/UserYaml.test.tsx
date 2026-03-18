@@ -67,4 +67,29 @@ describe('UserYaml', () => {
 
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
+
+  test('should render alert when user is from OIDC', () => {
+    const oidcUser: User = {
+      apiVersion: UserApiVersion,
+      kind: UserKind,
+      metadata: {
+        name: 'oidc-user',
+        uid: 'oidc-user',
+        creationTimestamp: '2025-01-24T17:48:45Z',
+      },
+      isOIDC: true,
+    }
+
+    mockUseUserDetailsContext.mockReturnValue({
+      user: oidcUser,
+      groups: [],
+    })
+
+    render(<Component />)
+
+    expect(screen.getByText("Can't display this information")).toBeInTheDocument()
+    expect(
+      screen.getByText("The identity is coming from external IDP and this information can't be displayed")
+    ).toBeInTheDocument()
+  })
 })

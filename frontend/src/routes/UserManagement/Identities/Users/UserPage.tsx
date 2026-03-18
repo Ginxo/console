@@ -8,11 +8,11 @@ import { Group, User } from '../../../../resources/rbac'
 import { ResourceError, ResourceErrorCode } from '../../../../resources/utils'
 import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
 import { AcmButton, AcmPage, AcmPageHeader, AcmSecondaryNav } from '../../../../ui-components'
+import { useMergedUsers } from '../useMergedIdentities'
 
 export const useCurrentUser = (): User | undefined => {
   const { id } = useParams()
-  const { usersState } = useSharedAtoms()
-  const users = useRecoilValue(usersState)
+  const users = useMergedUsers()
 
   return useMemo(
     () => (!users || !id ? undefined : users.find((u) => u.metadata.uid === id || u.metadata.name === id)),

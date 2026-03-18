@@ -66,4 +66,30 @@ describe('GroupYaml', () => {
 
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
+
+  test('should render alert when group is from OIDC', () => {
+    const oidcGroup: Group = {
+      apiVersion: UserApiVersion,
+      kind: GroupKind,
+      metadata: {
+        name: 'oidc-group',
+        uid: 'oidc-group',
+        creationTimestamp: '2025-01-24T17:48:45Z',
+      },
+      users: [],
+      isOIDC: true,
+    }
+
+    mockUseGroupDetailsContext.mockReturnValue({
+      group: oidcGroup,
+      users: [],
+    })
+
+    render(<Component />)
+
+    expect(screen.getByText("Can't display this information")).toBeInTheDocument()
+    expect(
+      screen.getByText("The identity is coming from external IDP and this information can't be displayed")
+    ).toBeInTheDocument()
+  })
 })

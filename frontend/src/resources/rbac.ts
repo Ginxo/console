@@ -83,6 +83,7 @@ export interface User {
   metadata: Metadata
   identities?: string[]
   groups?: string[]
+  isOIDC?: boolean
 }
 
 export interface Group {
@@ -90,6 +91,7 @@ export interface Group {
   kind: GroupKindType
   metadata: Metadata
   users: string[]
+  isOIDC?: boolean
 }
 
 export interface ClusterRole {
