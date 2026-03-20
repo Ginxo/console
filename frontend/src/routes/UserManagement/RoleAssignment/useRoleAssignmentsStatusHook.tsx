@@ -88,8 +88,8 @@ const useRoleAssignmentsStatusHook = () => {
         addAlert({
           title: t('Error creating missing projects'),
           message: t('Error creating missing projects {{project}} for clusters {{cluster}}.', {
-            clusters: Object.keys(callbackProgress.errorClusterNamespacesMap).join(', '),
-            projects: Object.values(callbackProgress.errorClusterNamespacesMap).flat().join(', '),
+            cluster: Object.keys(callbackProgress.errorClusterNamespacesMap).join(', '),
+            project: Object.values(callbackProgress.errorClusterNamespacesMap).flat().join(', '),
             errorCount: callbackProgress.errorCount,
           }),
           type: 'danger',
