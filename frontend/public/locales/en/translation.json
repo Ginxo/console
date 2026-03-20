@@ -1495,8 +1495,6 @@
   "equals any of": "equals any of",
   "error": "Error",
   "Error": "Error",
-  "Error creating missing project": "Error creating missing project",
-  "Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.": "Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.",
   "Error creating missing projects": "Error creating missing projects",
   "Error creating missing projects {{project}} for clusters {{cluster}}.": "Error creating missing projects {{project}} for clusters {{cluster}}.",
   "Error getting Ansible jobs": "Error getting Ansible jobs",

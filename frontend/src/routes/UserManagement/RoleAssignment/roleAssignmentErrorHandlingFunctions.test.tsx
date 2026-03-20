@@ -5,7 +5,7 @@ import { MulticlusterRoleAssignment } from '../../../resources/multicluster-role
 import {
   getMissingNamespacesPerCluster,
   handleMissingNamespaces,
-  type MultipleCallbackProgress,
+  MultipleCallbackProgress,
 } from './roleAssignmentErrorHandlingFunctions'
 
 jest.mock('../../../resources', () => ({
@@ -199,40 +199,40 @@ describe('handleMissingNamespaces', () => {
       expect(lastCall.totalCount).toBe(3)
     })
 
-    it('calls addAlertCallback with error when actionResponse is not ActionDone', async () => {
+    it('does not call addAlertCallback with per-cluster error when actionResponse is not ActionDone', async () => {
       mockFireManagedClusterActionCreate
         .mockResolvedValueOnce({ actionDone: 'ActionDone' })
         .mockResolvedValueOnce({ actionDone: 'Failed', message: 'Quota exceeded' })
 
       await handleMissingNamespaces(baseRoleAssignment, defaultDeps)
 
-      expect(mockAddAlertCallback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Error creating missing project',
-          type: 'danger',
-          autoClose: true,
-        })
-      )
       const errorCalls = (mockAddAlertCallback.mock.calls as unknown[][]).filter(
         (call) => (call[0] as unknown as { title?: string } | undefined)?.title === 'Error creating missing project'
       )
-      expect(errorCalls.length).toBeGreaterThanOrEqual(1)
+      expect(errorCalls).toHaveLength(0)
+
+      const progressCalls = mockOnProgressCallback.mock.calls as [MultipleCallbackProgress][]
+      const lastCall = progressCalls[progressCalls.length - 1][0]
+      expect(lastCall.errorCount).toBeGreaterThanOrEqual(1)
+      expect(Object.keys(lastCall.errorClusterNamespacesMap).length).toBeGreaterThanOrEqual(1)
     })
 
-    it('calls addAlertCallback with error when fireManagedClusterActionCreate rejects', async () => {
+    it('does not call addAlertCallback with per-cluster error when fireManagedClusterActionCreate rejects', async () => {
       mockFireManagedClusterActionCreate
         .mockResolvedValueOnce({ actionDone: 'ActionDone' })
         .mockRejectedValueOnce(new Error('Network error'))
 
       await handleMissingNamespaces(baseRoleAssignment, defaultDeps)
 
-      expect(mockAddAlertCallback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Error creating missing project',
-          type: 'danger',
-          autoClose: true,
-        })
+      const errorCalls = (mockAddAlertCallback.mock.calls as unknown[][]).filter(
+        (call) => (call[0] as unknown as { title?: string } | undefined)?.title === 'Error creating missing project'
       )
+      expect(errorCalls).toHaveLength(0)
+
+      const progressCalls = mockOnProgressCallback.mock.calls as [MultipleCallbackProgress][]
+      const lastCall = progressCalls[progressCalls.length - 1][0]
+      expect(lastCall.errorCount).toBeGreaterThanOrEqual(1)
+      expect(Object.keys(lastCall.errorClusterNamespacesMap).length).toBeGreaterThanOrEqual(1)
     })
 
     it('calls onProgressCallback with errorClusterNamespacesMap when some fail', async () => {

@@ -85,34 +85,14 @@ export async function handleMissingNamespaces(
             ...counter.errorClusterNamespacesMap,
             [clusterName]: [...(counter.errorClusterNamespacesMap[clusterName] ?? []), namespace],
           }
-          addAlertCallback({
-            title: t('Error creating missing project'),
-            message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-              project: namespace,
-              cluster: clusterName,
-              error: actionResponse?.message ?? 'Unknown error',
-            }),
-            type: 'danger',
-            autoClose: true,
-          })
         }
-      } catch (err: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
         counter.error++
         counter.errorClusterNamespacesMap = {
           ...counter.errorClusterNamespacesMap,
           [clusterName]: [...(counter.errorClusterNamespacesMap[clusterName] ?? []), namespace],
         }
-        const error = err instanceof Error ? err : new Error('Unknown error occurred')
-        addAlertCallback({
-          title: t('Error creating missing project'),
-          message: t('Error creating missing project {{project}} for cluster {{cluster}}. Error: {{error}}.', {
-            project: namespace,
-            cluster: clusterName,
-            error: error.message,
-          }),
-          type: 'danger',
-          autoClose: true,
-        })
       } finally {
         onProgressCallback({
           successCount: counter.success,
