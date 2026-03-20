@@ -7,8 +7,6 @@ import { tokenExpired } from '../logout'
 import {
   AgentClusterInstallApiVersion,
   AgentClusterInstallKind,
-  AuthenticationApiVersion,
-  AuthenticationKind,
   AgentKind,
   AgentKindVersion,
   AgentMachineApiVersion,
@@ -123,7 +121,6 @@ import { getBackendUrl, getRequest } from '../resources/utils'
 import {
   agentClusterInstallsState,
   agentMachinesState,
-  authenticationsState,
   agentServiceConfigsState,
   agentsState,
   ansibleJobState,
@@ -149,6 +146,7 @@ import {
   hostedClustersState,
   infraEnvironmentsState,
   infrastructuresState,
+  isDirectAuthenticationEnabledState,
   isFineGrainedRbacEnabledState,
   isGlobalHubState,
   isHubSelfManagedState,
@@ -194,7 +192,6 @@ export function LoadData(props: { children?: ReactNode }) {
   const { loadCompleted, setLoadStarted, setLoadCompleted } = useContext(PluginDataContext)
   const [eventsLoaded, setEventsLoaded] = useState(false)
 
-  const setAuthentications = useSetRecoilState(authenticationsState)
   const setAgentClusterInstalls = useSetRecoilState(agentClusterInstallsState)
   const setAgentMachinesState = useSetRecoilState(agentMachinesState)
   const setAgents = useSetRecoilState(agentsState)
@@ -223,6 +220,7 @@ export function LoadData(props: { children?: ReactNode }) {
   const setHostedClustersState = useSetRecoilState(hostedClustersState)
   const setInfraEnvironments = useSetRecoilState(infraEnvironmentsState)
   const setInfrastructure = useSetRecoilState(infrastructuresState)
+  const setIsDirectAuthenticationEnabled = useSetRecoilState(isDirectAuthenticationEnabledState)
   const setIsFineGrainedRbacEnabled = useSetRecoilState(isFineGrainedRbacEnabledState)
   const setIsGlobalHub = useSetRecoilState(isGlobalHubState)
   const setIsHubSelfManaged = useSetRecoilState(isHubSelfManagedState)
@@ -304,7 +302,6 @@ export function LoadData(props: { children?: ReactNode }) {
     addSetter(AgentServiceConfigKindVersion, AgentServiceConfigKind, setAgentServiceConfigs)
     addSetter(AnsibleJobApiVersion, AnsibleJobKind, setAnsibleJobs)
     addSetter(ApplicationApiVersion, ApplicationKind, setApplicationsState)
-    addSetter(AuthenticationApiVersion, AuthenticationKind, setAuthentications)
     addSetter(BareMetalHostApiVersion, BareMetalHostKind, setBareMetalHosts)
     addSetter(CertificateSigningRequestApiVersion, CertificateSigningRequestKind, setCertificateSigningRequests)
     addSetter(ChannelApiVersion, ChannelKind, setChannelsState)
@@ -356,7 +353,6 @@ export function LoadData(props: { children?: ReactNode }) {
 
     return { setters, mappers, caches }
   }, [
-    setAuthentications,
     setAgentClusterInstalls,
     setAgentMachinesState,
     setAgents,
@@ -570,9 +566,20 @@ export function LoadData(props: { children?: ReactNode }) {
     loading: globalHubLoading,
     startPolling: globalHubStartPoll,
     stopPolling: globalHubStopPoll,
-  } = useQuery(globalHubQueryFn, [{ isGlobalHub: false, localHubName: 'local-cluster', isHubSelfManaged: undefined }], {
-    pollInterval: 30,
-  })
+  } = useQuery(
+    globalHubQueryFn,
+    [
+      {
+        isGlobalHub: false,
+        localHubName: 'local-cluster',
+        isHubSelfManaged: undefined,
+        isDirectAuthenticationEnabled: false,
+      },
+    ],
+    {
+      pollInterval: 30,
+    }
+  )
 
   // Start all Polls for Global values here
   useEffect(() => {
@@ -589,6 +596,7 @@ export function LoadData(props: { children?: ReactNode }) {
     setIsGlobalHub(globalHubRes[0]?.isGlobalHub)
     setlocalHubName(globalHubRes[0]?.localHubName)
     setIsHubSelfManaged(globalHubRes[0]?.isHubSelfManaged)
+    setIsDirectAuthenticationEnabled(globalHubRes[0]?.isDirectAuthenticationEnabled ?? false)
   }
 
   const {
@@ -664,6 +672,7 @@ const globalHubQueryFn = () => {
     isGlobalHub: boolean
     localHubName: string
     isHubSelfManaged: boolean | undefined
+    isDirectAuthenticationEnabled: boolean
   }>(getBackendUrl() + '/hub')
 }
 
