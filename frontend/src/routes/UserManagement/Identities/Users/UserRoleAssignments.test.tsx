@@ -136,7 +136,7 @@ describe('UserRoleAssignments', () => {
     nockIgnoreApiPaths()
 
     // Reset mocks before each test
-    ;(useRecoilValue as jest.Mock).mockClear()
+    ;(useRecoilValue as jest.Mock).mockReset()
   })
 
   it('renders UserRoleAssignments component with no user found', async () => {
