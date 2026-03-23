@@ -159,6 +159,14 @@ export const isDirectAuthenticationEnabledState = atom<boolean>({
   default: false,
 })
 
+import type { ClaimMappings } from './resources/authentication'
+export type { ClaimMappings } from './resources/authentication'
+
+export const claimMappingsState = atom<ClaimMappings | undefined>({
+  key: 'claimMappings',
+  default: undefined,
+})
+
 export interface Settings {
   LOG_LEVEL?: string
   SAVED_SEARCH_LIMIT?: string

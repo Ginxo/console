@@ -5,7 +5,6 @@ import { Meta, StoryObj } from '@storybook/react'
 import React, { useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 
-// Mock the table components for Storybook
 const MockUsersTable = ({ onUserClick }: { onUserClick?: () => void }) => (
   <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
     <h3>Users Table (Mocked)</h3>
@@ -26,30 +25,32 @@ const MockGroupsTable = ({ onGroupClick }: { onGroupClick?: () => void }) => (
   </div>
 )
 
-// Create a mock version of IdentitiesList for Storybook
-// This approach avoids the jest.mock issue by creating a separate component
 interface MockedIdentitiesListProps {
   onUserSelect?: (user: any) => void
   onGroupSelect?: (group: any) => void
 }
 
+const linkStyle = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--pf-global--link--Color)',
+  textDecoration: 'underline',
+  cursor: 'pointer',
+  padding: 0,
+  font: 'inherit',
+} as const
+
 const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesListProps) => {
   const { t } = useTranslation()
   const [activeTabKey, setActiveTabKey] = useState<string | number>('users')
-  const [showCreatePreAuthorized, setShowCreatePreAuthorized] = useState(false)
+  const [showCreatePreAuthorizedUser, setShowCreatePreAuthorizedUser] = useState(false)
+  const [showCreatePreAuthorizedGroup, setShowCreatePreAuthorizedGroup] = useState(false)
 
   const handleTabClick = (_event: React.MouseEvent<HTMLElement, MouseEvent>, tabIndex: string | number) => {
     setActiveTabKey(tabIndex)
-    setShowCreatePreAuthorized(false)
+    setShowCreatePreAuthorizedUser(false)
+    setShowCreatePreAuthorizedGroup(false)
   }
-
-  const handlePreAuthorizedLinkClick = () => {
-    setActiveTabKey('users')
-    setShowCreatePreAuthorized(true)
-  }
-
-  const handleCancelPreAuthorized = () => setShowCreatePreAuthorized(false)
-  const handlePreAuthorizedSubmit = () => setShowCreatePreAuthorized(false)
 
   const handleUserClick = () => {
     const mockUser = { name: 'Mock User', id: 'mock-user-1' }
@@ -67,40 +68,47 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
         {t('Identities')}
       </Title>
 
-      <Content component="p" style={{ marginBottom: '1.5rem' }}>
-        {t('Select a user or group to assign this role, or ')}{' '}
-        <button
-          type="button"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--pf-global--link--Color)',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-            padding: 0,
-            font: 'inherit',
-          }}
-          onClick={handlePreAuthorizedLinkClick}
-        >
-          {t('add pre-authorized user')}
-        </button>
-      </Content>
-
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick} aria-label={t('Identity selection tabs')}>
         <Tab eventKey="users" title={<TabTitleText>{t('Users')}</TabTitleText>} aria-label={t('Users tab')}>
-          {showCreatePreAuthorized ? (
-            <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
-              <h3>Create Pre-Authorized User (Mocked)</h3>
-              <button onClick={handleCancelPreAuthorized}>Cancel</button>
-              <button onClick={handlePreAuthorizedSubmit}>Submit</button>
-            </div>
-          ) : (
-            <MockUsersTable onUserClick={handleUserClick} />
-          )}
+          <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
+            <Content component="p" style={{ marginBottom: '1.5rem' }}>
+              {t('Select a user to assign this role, or ')}{' '}
+              <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedUser(true)}>
+                {t('add pre-authorized user')}
+              </button>
+            </Content>
+
+            {showCreatePreAuthorizedUser ? (
+              <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
+                <h3>Create Pre-Authorized User (Mocked)</h3>
+                <button onClick={() => setShowCreatePreAuthorizedUser(false)}>Cancel</button>
+                <button onClick={() => setShowCreatePreAuthorizedUser(false)}>Submit</button>
+              </div>
+            ) : (
+              <MockUsersTable onUserClick={handleUserClick} />
+            )}
+          </div>
         </Tab>
 
         <Tab eventKey="groups" title={<TabTitleText>{t('Groups')}</TabTitleText>} aria-label={t('Groups tab')}>
-          <MockGroupsTable onGroupClick={handleGroupClick} />
+          <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
+            <Content component="p" style={{ marginBottom: '1.5rem' }}>
+              {t('Select a group to assign this role, or ')}{' '}
+              <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedGroup(true)}>
+                {t('add pre-authorized group')}
+              </button>
+            </Content>
+
+            {showCreatePreAuthorizedGroup ? (
+              <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
+                <h3>Create Pre-Authorized Group (Mocked)</h3>
+                <button onClick={() => setShowCreatePreAuthorizedGroup(false)}>Cancel</button>
+                <button onClick={() => setShowCreatePreAuthorizedGroup(false)}>Submit</button>
+              </div>
+            ) : (
+              <MockGroupsTable onGroupClick={handleGroupClick} />
+            )}
+          </div>
         </Tab>
       </Tabs>
     </PageSection>

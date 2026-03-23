@@ -12,6 +12,7 @@ interface GroupsTableProps {
   areLinksDisplayed?: boolean
   selectedGroup?: Group
   setSelectedGroup?: (group: Group) => void
+  additionalGroups?: Group[]
 }
 
 const GroupsTable = ({
@@ -19,14 +20,17 @@ const GroupsTable = ({
   areLinksDisplayed = true,
   selectedGroup,
   setSelectedGroup,
+  additionalGroups,
 }: GroupsTableProps) => {
   const { t } = useTranslation()
 
   const { groupsState } = useSharedAtoms()
   const groupsData = useRecoilValue(groupsState)
   const groups = useMemo(() => {
-    return groupsData?.toSorted((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? '')) ?? []
-  }, [groupsData])
+    const all = [...(groupsData ?? []), ...(additionalGroups ?? [])]
+    const unique = all.filter((g, i, arr) => arr.findIndex((x) => x.metadata.name === g.metadata.name) === i)
+    return unique.toSorted((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? ''))
+  }, [groupsData, additionalGroups])
 
   const handleRadioSelect = useCallback(
     (uid: string) => {

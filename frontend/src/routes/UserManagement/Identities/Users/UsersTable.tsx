@@ -12,15 +12,24 @@ interface UsersTableProps {
   areLinksDisplayed?: boolean
   selectedUser?: User
   setSelectedUser?: (user: User) => void
+  additionalUsers?: User[]
 }
 
-const UsersTable = ({ hiddenColumns, areLinksDisplayed = true, selectedUser, setSelectedUser }: UsersTableProps) => {
+const UsersTable = ({
+  hiddenColumns,
+  areLinksDisplayed = true,
+  selectedUser,
+  setSelectedUser,
+  additionalUsers,
+}: UsersTableProps) => {
   const { t } = useTranslation()
   const { usersState } = useSharedAtoms()
   const rbacUsers = useRecoilValue(usersState)
   const users = useMemo(() => {
-    return rbacUsers?.toSorted((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? '')) ?? []
-  }, [rbacUsers])
+    const all = [...(rbacUsers ?? []), ...(additionalUsers ?? [])]
+    const unique = all.filter((u, i, arr) => arr.findIndex((x) => x.metadata.name === u.metadata.name) === i)
+    return unique.toSorted((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? ''))
+  }, [rbacUsers, additionalUsers])
 
   const handleRadioSelect = useCallback(
     (uid: string) => {

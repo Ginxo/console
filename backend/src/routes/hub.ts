@@ -33,14 +33,43 @@ export async function hub(req: Http2ServerRequest, res: Http2ServerResponse): Pr
       ])
 
       const clusterAuth = authentications.find((r) => r.metadata?.name === 'cluster')
-      const isDirectAuthenticationEnabled = (clusterAuth as { spec?: { type?: string } })?.spec?.type === 'OIDC'
+      const typedAuth = clusterAuth as {
+        spec?: {
+          type?: string
+          oidcProviders?: Array<{
+            claimMappings?: {
+              username?: { claim?: string; prefix?: { prefixString?: string }; prefixPolicy?: string }
+              groups?: { claim?: string; prefix?: string }
+            }
+          }>
+        }
+      }
+      const isDirectAuthenticationEnabled = typedAuth?.spec?.type === 'OIDC'
+
+      const oidcClaimMappings = typedAuth?.spec?.oidcProviders?.[0]?.claimMappings
+      const authentication = {
+        isDirectAuthenticationEnabled,
+        ...(oidcClaimMappings && {
+          claimMappings: {
+            username: {
+              claim: oidcClaimMappings.username?.claim,
+              prefix: oidcClaimMappings.username?.prefix,
+              prefixPolicy: oidcClaimMappings.username?.prefixPolicy,
+            },
+            groups: {
+              claim: oidcClaimMappings.groups?.claim,
+              prefix: oidcClaimMappings.groups?.prefix,
+            },
+          },
+        }),
+      }
 
       const response = {
         isGlobalHub: crdResponse.isGlobalHub,
         localHubName: getHubClusterName(),
         isHubSelfManaged: getIsHubSelfManaged(),
         isObservabilityInstalled: getIsObservabilityInstalled(),
-        isDirectAuthenticationEnabled,
+        authentication,
       }
 
       res.setHeader('Content-Type', 'application/json')

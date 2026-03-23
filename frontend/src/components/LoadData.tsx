@@ -129,6 +129,8 @@ import {
   bareMetalHostsState,
   certificateSigningRequestsState,
   channelsState,
+  ClaimMappings,
+  claimMappingsState,
   clusterClaimsState,
   clusterCuratorsState,
   clusterDeploymentsState,
@@ -220,6 +222,7 @@ export function LoadData(props: { children?: ReactNode }) {
   const setHostedClustersState = useSetRecoilState(hostedClustersState)
   const setInfraEnvironments = useSetRecoilState(infraEnvironmentsState)
   const setInfrastructure = useSetRecoilState(infrastructuresState)
+  const setClaimMappings = useSetRecoilState(claimMappingsState)
   const setIsDirectAuthenticationEnabled = useSetRecoilState(isDirectAuthenticationEnabledState)
   const setIsFineGrainedRbacEnabled = useSetRecoilState(isFineGrainedRbacEnabledState)
   const setIsGlobalHub = useSetRecoilState(isGlobalHubState)
@@ -573,7 +576,7 @@ export function LoadData(props: { children?: ReactNode }) {
         isGlobalHub: false,
         localHubName: 'local-cluster',
         isHubSelfManaged: undefined,
-        isDirectAuthenticationEnabled: false,
+        authentication: { isDirectAuthenticationEnabled: false },
       },
     ],
     {
@@ -596,7 +599,8 @@ export function LoadData(props: { children?: ReactNode }) {
     setIsGlobalHub(globalHubRes[0]?.isGlobalHub)
     setlocalHubName(globalHubRes[0]?.localHubName)
     setIsHubSelfManaged(globalHubRes[0]?.isHubSelfManaged)
-    setIsDirectAuthenticationEnabled(globalHubRes[0]?.isDirectAuthenticationEnabled ?? false)
+    setIsDirectAuthenticationEnabled(globalHubRes[0]?.authentication?.isDirectAuthenticationEnabled ?? false)
+    setClaimMappings(globalHubRes[0]?.authentication?.claimMappings)
   }
 
   const {
@@ -672,7 +676,10 @@ const globalHubQueryFn = () => {
     isGlobalHub: boolean
     localHubName: string
     isHubSelfManaged: boolean | undefined
-    isDirectAuthenticationEnabled: boolean
+    authentication: {
+      isDirectAuthenticationEnabled: boolean
+      claimMappings?: ClaimMappings
+    }
   }>(getBackendUrl() + '/hub')
 }
 
