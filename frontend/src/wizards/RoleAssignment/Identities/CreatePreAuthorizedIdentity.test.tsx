@@ -2,9 +2,9 @@
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ClaimMappings } from '../../../atoms'
 import { CreatePreAuthorizedIdentity } from './CreatePreAuthorizedIdentity'
 import { useRecoilValue, useSharedAtoms } from '../../../shared-recoil'
+import { ClaimMappings } from '~/resources/authentication'
 
 jest.mock('../../../lib/acm-i18next', () => ({
   useTranslation: () => ({

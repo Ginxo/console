@@ -129,7 +129,6 @@ import {
   bareMetalHostsState,
   certificateSigningRequestsState,
   channelsState,
-  ClaimMappings,
   claimMappingsState,
   clusterClaimsState,
   clusterCuratorsState,
@@ -189,6 +188,7 @@ import {
 import { PluginDataContext } from '../lib/PluginDataContext'
 import { useQuery } from '../lib/useQuery'
 import { MultiClusterHubComponent } from '../resources/multi-cluster-hub-component'
+import { ClaimMappings } from '~/resources/authentication'
 
 export function LoadData(props: { children?: ReactNode }) {
   const { loadCompleted, setLoadStarted, setLoadCompleted } = useContext(PluginDataContext)

@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { Content, PageSection, Tab, Tabs, TabTitleText, Title } from '@patternfly/react-core'
+import { Button, Content, PageSection, Tab, Tabs, TabTitleText, Title } from '@patternfly/react-core'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { Group, User } from '../../../resources/rbac'
@@ -13,16 +13,6 @@ interface IdentitiesListProps {
   onGroupSelect?: (group: Group) => void
   initialSelectedIdentity?: { kind: 'User' | 'Group'; name: string }
 }
-
-const linkStyle = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--pf-global--link--Color)',
-  textDecoration: 'underline',
-  cursor: 'pointer',
-  padding: 0,
-  font: 'inherit',
-} as const
 
 export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIdentity }: IdentitiesListProps = {}) {
   const { t } = useTranslation()
@@ -114,9 +104,9 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
           <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
             <Content component="p" style={{ marginBottom: '1.5rem' }}>
               {t('Select a user to assign this role, or ')}{' '}
-              <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedUser(true)}>
+              <Button variant="link" isInline onClick={() => setShowCreatePreAuthorizedUser(true)}>
                 {t('add pre-authorized user')}
-              </button>
+              </Button>
             </Content>
 
             {showCreatePreAuthorizedUser ? (
@@ -140,9 +130,9 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
           <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
             <Content component="p" style={{ marginBottom: '1.5rem' }}>
               {t('Select a group to assign this role, or ')}{' '}
-              <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedGroup(true)}>
+              <Button variant="link" isInline onClick={() => setShowCreatePreAuthorizedGroup(true)}>
                 {t('add pre-authorized group')}
-              </button>
+              </Button>
             </Content>
 
             {showCreatePreAuthorizedGroup ? (

@@ -15,6 +15,7 @@ jest.mock('../../../routes/UserManagement/Identities/Users/UsersTable', () => ({
   UsersTable: (props: any) => (
     <div
       id="users-table"
+      data-testid="users-table"
       data-arelinks={props.areLinksDisplayed}
       data-additionalusers={JSON.stringify((props.additionalUsers ?? []).map((u: any) => u.metadata.name))}
     >
@@ -38,6 +39,7 @@ jest.mock('../../../routes/UserManagement/Identities/Groups/GroupsTable', () => 
   GroupsTable: (props: any) => (
     <div
       id="groups-table"
+      data-testid="groups-table"
       data-arelinks={props.areLinksDisplayed}
       data-additionalgroups={JSON.stringify((props.additionalGroups ?? []).map((g: any) => g.metadata.name))}
     >
@@ -121,6 +123,7 @@ describe('IdentitiesList', () => {
     fireEvent.click(groupsTab)
 
     expect(groupsTab).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText(/Select a group to assign this role, or/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'add pre-authorized group' })).toBeInTheDocument()
   })
 

@@ -3,7 +3,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CreateIdentityFormDirectAuthentication } from './CreateIdentityFormDirectAuthentication'
-import { ClaimMappings } from '../../../atoms'
+import { ClaimMappings } from '~/resources/authentication'
 
 jest.mock('../../../lib/acm-i18next', () => ({
   useTranslation: () => ({
@@ -182,7 +182,7 @@ describe('CreateIdentityFormDirectAuthentication', () => {
     render(<CreateIdentityFormDirectAuthentication {...defaultProps} claimMappings={claimMappings} />)
 
     const input = screen.getByTestId('identity-identifier')
-    expect(input).toHaveAttribute('placeholder', 'oidc:user@company.com')
+    expect(input).toHaveAttribute('placeholder', 'oidc:username')
   })
 
   it('shows prefix-based placeholder for groups', () => {

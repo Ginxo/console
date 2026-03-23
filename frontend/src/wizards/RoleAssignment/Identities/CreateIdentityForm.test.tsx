@@ -89,12 +89,12 @@ describe('CreateIdentityForm', () => {
   })
 
   it('calls createGroup on submit when subjectKind is Group', async () => {
-    render(<CreateIdentityForm {...defaultProps} subjectKind="Group" />)
+    render(<CreateIdentityForm {...defaultProps} subjectKind="Group" saveButtonText="Save group" />)
 
     const input = screen.getByTestId('identity-identifier')
     await userEvent.type(input, 'my-group')
 
-    const submitButton = screen.getByRole('button', { name: 'Save user' })
+    const submitButton = screen.getByRole('button', { name: 'Save group' })
     await userEvent.click(submitButton)
 
     await waitFor(() => {
