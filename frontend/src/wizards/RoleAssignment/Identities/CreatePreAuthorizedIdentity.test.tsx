@@ -85,8 +85,10 @@ function setupMocks(directAuth = false, claimMappings?: ClaimMappings) {
 
   mockAddAlert.mockClear()
   const actualReact = jest.requireActual('react')
-  jest.spyOn(actualReact, 'useContext').mockReturnValue({ addAlert: mockAddAlert })
+  useContextSpy = jest.spyOn(actualReact, 'useContext').mockReturnValue({ addAlert: mockAddAlert })
 }
+
+let useContextSpy: jest.SpyInstance | undefined
 
 describe('CreatePreAuthorizedIdentity', () => {
   const defaultProps = {
@@ -98,6 +100,11 @@ describe('CreatePreAuthorizedIdentity', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     setupMocks(false)
+  })
+
+  afterEach(() => {
+    useContextSpy?.mockRestore()
+    useContextSpy = undefined
   })
 
   it('renders CreateIdentityForm when direct auth is disabled', () => {

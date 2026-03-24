@@ -236,6 +236,12 @@ describe('IdentitiesList', () => {
     })
 
     fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Pre-Auth User Form')).not.toBeInTheDocument()
+      expect(screen.getByText('Groups Table (No Links)')).toBeInTheDocument()
+    })
+
     fireEvent.click(screen.getByRole('tab', { name: 'Users tab' }))
 
     await waitFor(() => {
