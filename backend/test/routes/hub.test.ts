@@ -1,6 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import nock from 'nock'
 import { parsePipedJsonBody } from '../../src/lib/body-parser'
+import { IResource } from '../../src/resources/resource'
 import { cacheResource, resetResourceCache } from '../../src/routes/events'
 import { request } from '../mock-request'
 
@@ -25,7 +26,7 @@ describe('global hub', function () {
   afterEach(() => resetResourceCache())
 
   it('should return authentication without claimMappings when auth type is not OIDC', async function () {
-    mockCrdNock(process.env.CLUSTER_API_URL!)
+    mockCrdNock(process.env.CLUSTER_API_URL)
     const res = await request('GET', '/hub')
     expect(res.statusCode).toEqual(200)
     const parsed = await parsePipedJsonBody(res)
@@ -57,11 +58,11 @@ describe('global hub', function () {
             },
           ],
         },
-      } as any,
+      } as IResource,
       false
     )
 
-    mockCrdNock(process.env.CLUSTER_API_URL!)
+    mockCrdNock(process.env.CLUSTER_API_URL)
     const res = await request('GET', '/hub')
     expect(res.statusCode).toEqual(200)
     const parsed = await parsePipedJsonBody(res)
