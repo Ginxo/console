@@ -42,7 +42,6 @@ jest.mock('./CreateIdentityForm', () => ({
       </div>
     )
   },
-  validateIdentityIdentifier: jest.fn(),
 }))
 
 jest.mock('./CreateIdentityFormDirectAuthentication', () => ({

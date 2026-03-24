@@ -8,6 +8,17 @@ import { AcmToastContext } from '../../../ui-components/AcmAlert/AcmToast'
 import { CreateIdentityForm } from './CreateIdentityForm'
 import { CreateIdentityFormDirectAuthentication } from './CreateIdentityFormDirectAuthentication'
 
+function getSaveButtonText(t: ReturnType<typeof useTranslation>['t'], isDirectAuth: boolean, isUser: boolean): string {
+  const texts = {
+    addUser: t('Add pre-authorized user'),
+    addGroup: t('Add pre-authorized group'),
+    saveUser: t('Save pre-authorized user'),
+    saveGroup: t('Save pre-authorized group'),
+  }
+  const key = `${isDirectAuth ? 'add' : 'save'}${isUser ? 'User' : 'Group'}` as keyof typeof texts
+  return texts[key]
+}
+
 interface CreatePreAuthorizedIdentityProps {
   subjectKind: 'User' | 'Group'
   onClose: () => void
@@ -53,7 +64,7 @@ export function CreatePreAuthorizedIdentity({ subjectKind, onClose, onSuccess }:
     })
   }
 
-  const saveButtonText = isUser ? t('Save pre-authorized user') : t('Save pre-authorized group')
+  const saveButtonText = getSaveButtonText(t, isDirectAuthenticationEnabled, isUser)
   const cancelButtonText = isUser ? t('Cancel and search users instead') : t('Cancel and search groups instead')
 
   return (
