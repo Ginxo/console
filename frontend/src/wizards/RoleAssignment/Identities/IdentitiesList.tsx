@@ -105,7 +105,7 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
             <Content component="p" style={{ marginBottom: '1.5rem' }}>
               {t('Select a user to assign this role, or ')}{' '}
               <Button variant="link" isInline onClick={() => setShowCreatePreAuthorizedUser(true)}>
-                {t('add pre-authorized user')}
+                {t('Add pre-authorized user')}
               </Button>
             </Content>
 
@@ -131,7 +131,7 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
             <Content component="p" style={{ marginBottom: '1.5rem' }}>
               {t('Select a group to assign this role, or ')}{' '}
               <Button variant="link" isInline onClick={() => setShowCreatePreAuthorizedGroup(true)}>
-                {t('add pre-authorized group')}
+                {t('Add pre-authorized group')}
               </Button>
             </Content>
 

@@ -74,7 +74,7 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
             <Content component="p" style={{ marginBottom: '1.5rem' }}>
               {t('Select a user to assign this role, or ')}{' '}
               <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedUser(true)}>
-                {t('add pre-authorized user')}
+                {t('Add pre-authorized user')}
               </button>
             </Content>
 
@@ -95,7 +95,7 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
             <Content component="p" style={{ marginBottom: '1.5rem' }}>
               {t('Select a group to assign this role, or ')}{' '}
               <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedGroup(true)}>
-                {t('add pre-authorized group')}
+                {t('Add pre-authorized group')}
               </button>
             </Content>
 
