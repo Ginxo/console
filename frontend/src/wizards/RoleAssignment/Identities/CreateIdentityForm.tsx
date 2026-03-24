@@ -6,6 +6,7 @@ import { useTranslation } from '../../../lib/acm-i18next'
 import { createGroup, createUser, Group, User } from '../../../resources/rbac'
 import { AcmForm, AcmSubmit } from '../../../ui-components/AcmForm/AcmForm'
 import { AcmTextInput } from '../../../ui-components/AcmTextInput/AcmTextInput'
+import { validateIdentityIdentifier } from './utils'
 
 interface CreateIdentityFormProps {
   subjectKind: 'User' | 'Group'
@@ -18,13 +19,6 @@ interface CreateIdentityFormProps {
 
 interface FormData {
   identityIdentifier: string
-}
-
-export function validateIdentityIdentifier(value: string, errorMessage: string): string | undefined {
-  if (!value || value.trim() === '') {
-    return errorMessage
-  }
-  return undefined
 }
 
 export function CreateIdentityForm({
