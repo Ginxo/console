@@ -10,6 +10,41 @@ import { IResource } from '../resources/resource'
 import { ResourceList } from '../resources/resource-list'
 import { getHubClusterName, getIsHubSelfManaged, getIsObservabilityInstalled, getKubeResources } from './events'
 
+interface AuthenticationResource {
+  spec?: {
+    type?: string
+    oidcProviders?: Array<{
+      claimMappings?: {
+        username?: { claim?: string; prefix?: { prefixString?: string }; prefixPolicy?: string }
+        groups?: { claim?: string; prefix?: string }
+      }
+    }>
+  }
+}
+
+export function buildAuthentication(resources: IResource[]) {
+  const clusterAuth = resources.find((r) => r.metadata?.name === 'cluster') as AuthenticationResource | undefined
+  const isDirectAuthenticationEnabled = clusterAuth?.spec?.type === 'OIDC'
+
+  const oidcClaimMappings = clusterAuth?.spec?.oidcProviders?.[0]?.claimMappings
+  return {
+    isDirectAuthenticationEnabled,
+    ...(oidcClaimMappings && {
+      claimMappings: {
+        username: {
+          claim: oidcClaimMappings.username?.claim,
+          prefix: oidcClaimMappings.username?.prefix,
+          prefixPolicy: oidcClaimMappings.username?.prefixPolicy,
+        },
+        groups: {
+          claim: oidcClaimMappings.groups?.claim,
+          prefix: oidcClaimMappings.groups?.prefix,
+        },
+      },
+    }),
+  }
+}
+
 export async function hub(req: Http2ServerRequest, res: Http2ServerResponse): Promise<void> {
   const token = await getAuthenticatedToken(req, res)
   if (token) {
@@ -32,44 +67,12 @@ export async function hub(req: Http2ServerRequest, res: Http2ServerResponse): Pr
         getKubeResources('Authentication', 'config.openshift.io/v1'),
       ])
 
-      const clusterAuth = authentications.find((r) => r.metadata?.name === 'cluster')
-      const typedAuth = clusterAuth as {
-        spec?: {
-          type?: string
-          oidcProviders?: Array<{
-            claimMappings?: {
-              username?: { claim?: string; prefix?: { prefixString?: string }; prefixPolicy?: string }
-              groups?: { claim?: string; prefix?: string }
-            }
-          }>
-        }
-      }
-      const isDirectAuthenticationEnabled = typedAuth?.spec?.type === 'OIDC'
-
-      const oidcClaimMappings = typedAuth?.spec?.oidcProviders?.[0]?.claimMappings
-      const authentication = {
-        isDirectAuthenticationEnabled,
-        ...(oidcClaimMappings && {
-          claimMappings: {
-            username: {
-              claim: oidcClaimMappings.username?.claim,
-              prefix: oidcClaimMappings.username?.prefix,
-              prefixPolicy: oidcClaimMappings.username?.prefixPolicy,
-            },
-            groups: {
-              claim: oidcClaimMappings.groups?.claim,
-              prefix: oidcClaimMappings.groups?.prefix,
-            },
-          },
-        }),
-      }
-
       const response = {
         isGlobalHub: crdResponse.isGlobalHub,
         localHubName: getHubClusterName(),
         isHubSelfManaged: getIsHubSelfManaged(),
         isObservabilityInstalled: getIsObservabilityInstalled(),
-        authentication,
+        authentication: buildAuthentication(authentications),
       }
 
       res.setHeader('Content-Type', 'application/json')
