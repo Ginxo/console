@@ -1,14 +1,12 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { ActionGroup, ActionList, ActionListGroup, ActionListItem, Button } from '@patternfly/react-core'
-import { ExclamationTriangleIcon } from '@patternfly/react-icons'
 import { useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { ClaimMappings } from '../../../resources/authentication'
 import { Group, GroupKind, User, UserApiVersion, UserKind } from '../../../resources/rbac'
 import { AcmForm, AcmSubmit } from '../../../ui-components/AcmForm/AcmForm'
 import { AcmTextInput } from '../../../ui-components/AcmTextInput/AcmTextInput'
-import { TooltipWrapper } from '../../../ui-components/utils'
 import { validateIdentityIdentifier } from './utils'
 
 interface CreateIdentityFormDirectAuthenticationProps {
@@ -83,7 +81,7 @@ export function CreateIdentityFormDirectAuthentication({
   const defaultValidation = (value: string) =>
     validateIdentityIdentifier(value, isUser ? t('User identifier is required') : t('Group identifier is required'))
   const validate = validation ?? defaultValidation
-  const prefixWarning = getPrefixWarning(subjectKind, claimMappings, t)(formData.identityIdentifier)
+  const prefixWarningFn = getPrefixWarning(subjectKind, claimMappings, t)
 
   const handleSubmit = async () => {
     const name = formData.identityIdentifier.trim()
@@ -112,6 +110,7 @@ export function CreateIdentityFormDirectAuthentication({
         value={formData.identityIdentifier}
         onChange={(_event, value) => setFormData({ ...formData, identityIdentifier: value })}
         validation={validate}
+        warning={prefixWarningFn}
         isRequired
       />
 
@@ -119,15 +118,7 @@ export function CreateIdentityFormDirectAuthentication({
         <ActionList>
           <ActionListGroup>
             <ActionListItem>
-              <TooltipWrapper showTooltip={!!prefixWarning} tooltip={prefixWarning}>
-                <AcmSubmit
-                  label={saveButtonText}
-                  processingLabel={t('Saving...')}
-                  onClick={handleSubmit}
-                  variant={prefixWarning ? 'warning' : 'primary'}
-                  icon={prefixWarning ? <ExclamationTriangleIcon /> : undefined}
-                />
-              </TooltipWrapper>
+              <AcmSubmit label={saveButtonText} processingLabel={t('Saving...')} onClick={handleSubmit} />
             </ActionListItem>
             <ActionListItem>
               <Button variant="link" onClick={onCancel}>

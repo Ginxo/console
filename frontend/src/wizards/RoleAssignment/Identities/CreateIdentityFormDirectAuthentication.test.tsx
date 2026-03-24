@@ -79,7 +79,7 @@ describe('CreateIdentityFormDirectAuthentication', () => {
     })
   })
 
-  it('shows warning on submit button but allows submission when user prefix does not match', async () => {
+  it('shows warning on input but allows submission when user prefix does not match', async () => {
     const claimMappings: ClaimMappings = {
       username: { claim: 'email', prefix: { prefixString: 'oidc:' }, prefixPolicy: 'Prefix' },
     }
@@ -90,8 +90,6 @@ describe('CreateIdentityFormDirectAuthentication', () => {
     await userEvent.type(input, 'no-prefix-user')
 
     const submitButton = screen.getByRole('button', { name: 'Save' })
-    expect(submitButton).toHaveClass('pf-m-warning')
-
     await userEvent.click(submitButton)
 
     await waitFor(() => {
@@ -121,7 +119,7 @@ describe('CreateIdentityFormDirectAuthentication', () => {
     })
   })
 
-  it('shows warning on submit button but allows submission when group prefix does not match', async () => {
+  it('shows warning on input but allows submission when group prefix does not match', async () => {
     const claimMappings: ClaimMappings = {
       groups: { claim: 'groups', prefix: 'oidc:' },
     }
@@ -134,8 +132,6 @@ describe('CreateIdentityFormDirectAuthentication', () => {
     await userEvent.type(input, 'no-prefix-group')
 
     const submitButton = screen.getByRole('button', { name: 'Save' })
-    expect(submitButton).toHaveClass('pf-m-warning')
-
     await userEvent.click(submitButton)
 
     await waitFor(() => {
