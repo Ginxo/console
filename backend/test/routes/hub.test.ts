@@ -6,8 +6,8 @@ import { cacheResource, resetResourceCache } from '../../src/routes/events'
 import { request } from '../mock-request'
 
 function mockCrdNock(url: string) {
-  nock(url).get('/apis').reply(200, { status: 200 })
-  nock(url)
+  const apisScope = nock(url).get('/apis').reply(200, { status: 200 })
+  const crdScope = nock(url)
     .get('/apis/apiextensions.k8s.io/v1/customresourcedefinitions')
     .reply(200, {
       items: [
@@ -20,13 +20,14 @@ function mockCrdNock(url: string) {
         },
       ],
     })
+  return { apisScope, crdScope }
 }
 
 describe('global hub', function () {
   afterEach(() => resetResourceCache())
 
   it('should return authentication without claimMappings when auth type is not OIDC', async function () {
-    mockCrdNock(process.env.CLUSTER_API_URL)
+    const { apisScope, crdScope } = mockCrdNock(process.env.CLUSTER_API_URL)
     const res = await request('GET', '/hub')
     expect(res.statusCode).toEqual(200)
     const parsed = await parsePipedJsonBody(res)
@@ -39,6 +40,8 @@ describe('global hub', function () {
         isDirectAuthenticationEnabled: false,
       },
     })
+    apisScope.done()
+    crdScope.done()
   })
 
   it('should return claimMappings when auth type is OIDC', async function () {
@@ -62,7 +65,7 @@ describe('global hub', function () {
       false
     )
 
-    mockCrdNock(process.env.CLUSTER_API_URL)
+    const { apisScope, crdScope } = mockCrdNock(process.env.CLUSTER_API_URL)
     const res = await request('GET', '/hub')
     expect(res.statusCode).toEqual(200)
     const parsed = await parsePipedJsonBody(res)
@@ -79,5 +82,7 @@ describe('global hub', function () {
         },
       },
     })
+    apisScope.done()
+    crdScope.done()
   })
 })
