@@ -99,13 +99,13 @@ const MockedIdentitiesList = ({
 
   const userActionButton = (
     <Button variant="primary" onClick={() => setShowCreatePreAuthorizedUser(true)}>
-      {isDirectAuthenticationEnabled ? t('Add pre-authorized user') : t('Create pre-authorized user')}
+      {isDirectAuthenticationEnabled ? t('Add user') : t('Create user')}
     </Button>
   )
 
   const groupActionButton = (
     <Button variant="primary" onClick={() => setShowCreatePreAuthorizedGroup(true)}>
-      {isDirectAuthenticationEnabled ? t('Add pre-authorized group') : t('Create pre-authorized group')}
+      {isDirectAuthenticationEnabled ? t('Add group') : t('Create group')}
     </Button>
   )
 

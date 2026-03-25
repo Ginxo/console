@@ -124,21 +124,21 @@ describe('CreatePreAuthorizedIdentity', () => {
   it('shows correct button text for User subjectKind', () => {
     render(<CreatePreAuthorizedIdentity {...defaultProps} />)
 
-    expect(screen.getByRole('button', { name: 'Save pre-authorized user' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save user' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel and search users instead' })).toBeInTheDocument()
   })
 
   it('shows correct button text for Group subjectKind', () => {
     render(<CreatePreAuthorizedIdentity {...defaultProps} subjectKind="Group" />)
 
-    expect(screen.getByRole('button', { name: 'Save pre-authorized group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save group' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel and search groups instead' })).toBeInTheDocument()
   })
 
   it('calls onSuccess and onClose on successful user creation', async () => {
     render(<CreatePreAuthorizedIdentity {...defaultProps} />)
 
-    const successButton = screen.getByRole('button', { name: 'Save pre-authorized user' })
+    const successButton = screen.getByRole('button', { name: 'Save user' })
     await userEvent.click(successButton)
 
     expect(defaultProps.onSuccess).toHaveBeenCalledWith(
@@ -153,7 +153,7 @@ describe('CreatePreAuthorizedIdentity', () => {
   it('calls onSuccess and onClose on successful group creation', async () => {
     render(<CreatePreAuthorizedIdentity {...defaultProps} subjectKind="Group" />)
 
-    const successButton = screen.getByRole('button', { name: 'Save pre-authorized group' })
+    const successButton = screen.getByRole('button', { name: 'Save group' })
     await userEvent.click(successButton)
 
     expect(defaultProps.onSuccess).toHaveBeenCalledWith(

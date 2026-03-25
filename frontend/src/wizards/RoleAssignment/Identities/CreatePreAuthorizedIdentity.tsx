@@ -29,10 +29,10 @@ function getDescriptionText(t: ReturnType<typeof useTranslation>['t'], isDirectA
 
 function getSaveButtonText(t: ReturnType<typeof useTranslation>['t'], isDirectAuth: boolean, isUser: boolean): string {
   const texts = {
-    addUser: t('Add pre-authorized user'),
-    addGroup: t('Add pre-authorized group'),
-    saveUser: t('Save pre-authorized user'),
-    saveGroup: t('Save pre-authorized group'),
+    addUser: t('Add user'),
+    addGroup: t('Add group'),
+    saveUser: t('Save user'),
+    saveGroup: t('Save group'),
   }
   const key = `${isDirectAuth ? 'add' : 'save'}${isUser ? 'User' : 'Group'}` as keyof typeof texts
   return texts[key]

@@ -236,7 +236,7 @@ describe('UsersTable', () => {
       const tableActionButtons: IAcmTableButtonAction[] = [
         {
           id: 'create-pre-authorized-user',
-          title: 'Create pre-authorized user',
+          title: 'Create user',
           click: mockClick,
           variant: ButtonVariant.primary,
         },
@@ -244,7 +244,7 @@ describe('UsersTable', () => {
       render(<Component tableActionButtons={tableActionButtons} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Create pre-authorized user' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Create user' })).toBeInTheDocument()
       })
     })
 
@@ -253,7 +253,7 @@ describe('UsersTable', () => {
       const tableActionButtons: IAcmTableButtonAction[] = [
         {
           id: 'create-pre-authorized-user',
-          title: 'Create pre-authorized user',
+          title: 'Create user',
           click: mockClick,
           variant: ButtonVariant.primary,
         },
@@ -261,10 +261,10 @@ describe('UsersTable', () => {
       render(<Component tableActionButtons={tableActionButtons} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Create pre-authorized user' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Create user' })).toBeInTheDocument()
       })
 
-      screen.getByRole('button', { name: 'Create pre-authorized user' }).click()
+      screen.getByRole('button', { name: 'Create user' }).click()
       expect(mockClick).toHaveBeenCalledTimes(1)
     })
 
@@ -275,7 +275,7 @@ describe('UsersTable', () => {
         expect(screen.getByText('alice.trask')).toBeInTheDocument()
       })
 
-      expect(screen.queryByRole('button', { name: 'Create pre-authorized user' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Create user' })).not.toBeInTheDocument()
     })
   })
 })

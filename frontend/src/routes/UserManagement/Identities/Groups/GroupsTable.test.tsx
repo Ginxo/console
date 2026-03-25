@@ -317,7 +317,7 @@ describe('GroupsTable', () => {
       const tableActionButtons: IAcmTableButtonAction[] = [
         {
           id: 'create-pre-authorized-group',
-          title: 'Create pre-authorized group',
+          title: 'Create group',
           click: mockClick,
           variant: ButtonVariant.primary,
         },
@@ -325,7 +325,7 @@ describe('GroupsTable', () => {
       render(<Component tableActionButtons={tableActionButtons} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Create pre-authorized group' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Create group' })).toBeInTheDocument()
       })
     })
 
@@ -334,7 +334,7 @@ describe('GroupsTable', () => {
       const tableActionButtons: IAcmTableButtonAction[] = [
         {
           id: 'create-pre-authorized-group',
-          title: 'Create pre-authorized group',
+          title: 'Create group',
           click: mockClick,
           variant: ButtonVariant.primary,
         },
@@ -342,10 +342,10 @@ describe('GroupsTable', () => {
       render(<Component tableActionButtons={tableActionButtons} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Create pre-authorized group' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Create group' })).toBeInTheDocument()
       })
 
-      screen.getByRole('button', { name: 'Create pre-authorized group' }).click()
+      screen.getByRole('button', { name: 'Create group' }).click()
       expect(mockClick).toHaveBeenCalledTimes(1)
     })
 
@@ -356,7 +356,7 @@ describe('GroupsTable', () => {
         expect(screen.getByText('kubevirt-admins')).toBeInTheDocument()
       })
 
-      expect(screen.queryByRole('button', { name: 'Create pre-authorized group' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Create group' })).not.toBeInTheDocument()
     })
   })
 })
