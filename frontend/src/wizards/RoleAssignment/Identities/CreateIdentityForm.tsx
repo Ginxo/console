@@ -56,7 +56,7 @@ export function CreateIdentityForm({
     <AcmForm>
       <AcmTextInput
         id="identity-identifier"
-        label={isUser ? t('User Identifier') : t('Group Identifier')}
+        label={isUser ? t('User identifier') : t('Group identifier')}
         placeholder={isUser ? t('user@company.com or username') : t('group-name')}
         value={formData.identityIdentifier}
         onChange={(_event, value) => setFormData({ ...formData, identityIdentifier: value })}

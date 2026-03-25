@@ -105,7 +105,7 @@ export function CreateIdentityFormDirectAuthentication({
     <AcmForm>
       <AcmTextInput
         id="identity-identifier"
-        label={isUser ? t('User Identifier') : t('Group Identifier')}
+        label={isUser ? t('User identifier') : t('Group identifier')}
         placeholder={getPlaceholder(subjectKind, claimMappings, t)}
         value={formData.identityIdentifier}
         onChange={(_event, value) => setFormData({ ...formData, identityIdentifier: value })}
