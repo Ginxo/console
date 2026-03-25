@@ -4,7 +4,7 @@ import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { Group } from '../../../../resources/rbac'
 import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
-import { AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
+import { AcmButton, AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
 import { groupsTableColumns, useFilters } from '../IdentityTableHelper'
 
 interface GroupsTableProps {
@@ -13,6 +13,9 @@ interface GroupsTableProps {
   selectedGroup?: Group
   setSelectedGroup?: (group: Group) => void
   additionalGroups?: Group[]
+  isCreateButtonDisplayed?: boolean
+  createButtonText?: string
+  onCreateClick?: () => void
 }
 
 const GroupsTable = ({
@@ -21,6 +24,9 @@ const GroupsTable = ({
   selectedGroup,
   setSelectedGroup,
   additionalGroups,
+  isCreateButtonDisplayed,
+  createButtonText,
+  onCreateClick,
 }: GroupsTableProps) => {
   const { t } = useTranslation()
 
@@ -84,6 +90,11 @@ const GroupsTable = ({
           }
           action={
             <div>
+              {isCreateButtonDisplayed && onCreateClick && (
+                <AcmButton variant="primary" onClick={onCreateClick}>
+                  {createButtonText ?? t('Create group')}
+                </AcmButton>
+              )}
               <ViewDocumentationLink doclink={DOC_LINKS.IDENTITY_PROVIDER_CONFIGURATION} />
             </div>
           }

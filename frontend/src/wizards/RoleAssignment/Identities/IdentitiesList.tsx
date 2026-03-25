@@ -16,7 +16,8 @@ interface IdentitiesListProps {
 
 export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIdentity }: IdentitiesListProps = {}) {
   const { t } = useTranslation()
-  const { usersState, groupsState } = useSharedAtoms()
+  const { usersState, groupsState, isDirectAuthenticationEnabledState } = useSharedAtoms()
+  const isDirectAuthenticationEnabled = useRecoilValue(isDirectAuthenticationEnabledState)
   const users = useRecoilValue(usersState)
   const groups = useRecoilValue(groupsState)
 
@@ -121,6 +122,9 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
                 selectedUser={selectedUser}
                 setSelectedUser={handleOnUserSelect}
                 additionalUsers={additionalUsers}
+                isCreateButtonDisplayed={isDirectAuthenticationEnabled}
+                createButtonText={isDirectAuthenticationEnabled ? t('Add user') : undefined}
+                onCreateClick={() => setShowCreatePreAuthorizedUser(true)}
               />
             )}
           </div>
@@ -147,6 +151,9 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
                 selectedGroup={selectedGroup}
                 setSelectedGroup={handleOnGroupSelect}
                 additionalGroups={additionalGroups}
+                isCreateButtonDisplayed={isDirectAuthenticationEnabled}
+                createButtonText={isDirectAuthenticationEnabled ? t('Add group') : undefined}
+                onCreateClick={() => setShowCreatePreAuthorizedGroup(true)}
               />
             )}
           </div>

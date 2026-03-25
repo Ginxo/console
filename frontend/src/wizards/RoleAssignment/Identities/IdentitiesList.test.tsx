@@ -4,12 +4,40 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom-v5-compat'
 import { RecoilRoot } from 'recoil'
 import { IdentitiesList } from './IdentitiesList'
+import { useRecoilValue, useSharedAtoms } from '../../../shared-recoil'
 
 jest.mock('../../../lib/acm-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }))
+
+jest.mock('../../../shared-recoil', () => ({
+  useRecoilValue: jest.fn(),
+  useSharedAtoms: jest.fn(),
+}))
+
+const mockUseSharedAtoms = useSharedAtoms as jest.MockedFunction<typeof useSharedAtoms>
+const mockUseRecoilValue = useRecoilValue as jest.MockedFunction<typeof useRecoilValue>
+
+const usersAtom = Symbol('usersState')
+const groupsAtom = Symbol('groupsState')
+const isDirectAuthAtom = Symbol('isDirectAuthenticationEnabledState')
+
+function setupMocks(isDirectAuthenticationEnabled = false) {
+  mockUseSharedAtoms.mockReturnValue({
+    usersState: usersAtom,
+    groupsState: groupsAtom,
+    isDirectAuthenticationEnabledState: isDirectAuthAtom,
+  } as any)
+
+  mockUseRecoilValue.mockImplementation((atom: unknown) => {
+    if (atom === usersAtom) return []
+    if (atom === groupsAtom) return []
+    if (atom === isDirectAuthAtom) return isDirectAuthenticationEnabled
+    return undefined
+  })
+}
 
 jest.mock('../../../routes/UserManagement/Identities/Users/UsersTable', () => ({
   UsersTable: (props: any) => (
@@ -18,6 +46,8 @@ jest.mock('../../../routes/UserManagement/Identities/Users/UsersTable', () => ({
       data-testid="users-table"
       data-arelinks={props.areLinksDisplayed}
       data-additionalusers={JSON.stringify((props.additionalUsers ?? []).map((u: any) => u.metadata.name))}
+      data-iscreatebuttondisplayed={String(!!props.isCreateButtonDisplayed)}
+      data-createbuttontext={props.createButtonText ?? ''}
     >
       Users Table {props.areLinksDisplayed === false ? '(No Links)' : '(With Links)'}
       {props.selectedUser && ` - Selected: ${props.selectedUser.metadata.name}`}
@@ -31,6 +61,9 @@ jest.mock('../../../routes/UserManagement/Identities/Users/UsersTable', () => ({
           Select User
         </button>
       )}
+      {props.onCreateClick && (
+        <button onClick={props.onCreateClick}>Create User Action</button>
+      )}
     </div>
   ),
 }))
@@ -42,6 +75,8 @@ jest.mock('../../../routes/UserManagement/Identities/Groups/GroupsTable', () => 
       data-testid="groups-table"
       data-arelinks={props.areLinksDisplayed}
       data-additionalgroups={JSON.stringify((props.additionalGroups ?? []).map((g: any) => g.metadata.name))}
+      data-iscreatebuttondisplayed={String(!!props.isCreateButtonDisplayed)}
+      data-createbuttontext={props.createButtonText ?? ''}
     >
       Groups Table {props.areLinksDisplayed === false ? '(No Links)' : '(With Links)'}
       {props.selectedGroup && ` - Selected: ${props.selectedGroup.metadata.name}`}
@@ -54,6 +89,9 @@ jest.mock('../../../routes/UserManagement/Identities/Groups/GroupsTable', () => 
         >
           Select Group
         </button>
+      )}
+      {props.onCreateClick && (
+        <button onClick={props.onCreateClick}>Create Group Action</button>
       )}
     </div>
   ),
@@ -91,6 +129,7 @@ function Component(props: any = {}) {
 describe('IdentitiesList', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    setupMocks(false)
   })
 
   test('should render title and per-tab descriptions', () => {
@@ -259,5 +298,83 @@ describe('IdentitiesList', () => {
     fireEvent.click(groupsTab)
 
     expect(screen.getByText('Groups Table (No Links)')).toBeInTheDocument()
+  })
+
+  describe('create button props when isDirectAuthenticationEnabled is false', () => {
+    test('should not pass isCreateButtonDisplayed to UsersTable', () => {
+      render(<Component />)
+
+      const usersTable = screen.getByTestId('users-table')
+      expect(usersTable.getAttribute('data-iscreatebuttondisplayed')).toBe('false')
+    })
+
+    test('should not pass isCreateButtonDisplayed to GroupsTable', () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      const groupsTable = screen.getByTestId('groups-table')
+      expect(groupsTable.getAttribute('data-iscreatebuttondisplayed')).toBe('false')
+    })
+  })
+
+  describe('create button props when isDirectAuthenticationEnabled is true', () => {
+    beforeEach(() => {
+      setupMocks(true)
+    })
+
+    test('should pass isCreateButtonDisplayed=true to UsersTable', () => {
+      render(<Component />)
+
+      const usersTable = screen.getByTestId('users-table')
+      expect(usersTable.getAttribute('data-iscreatebuttondisplayed')).toBe('true')
+    })
+
+    test('should pass createButtonText="Add user" to UsersTable', () => {
+      render(<Component />)
+
+      const usersTable = screen.getByTestId('users-table')
+      expect(usersTable.getAttribute('data-createbuttontext')).toBe('Add user')
+    })
+
+    test('should pass isCreateButtonDisplayed=true to GroupsTable', () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      const groupsTable = screen.getByTestId('groups-table')
+      expect(groupsTable.getAttribute('data-iscreatebuttondisplayed')).toBe('true')
+    })
+
+    test('should pass createButtonText="Add group" to GroupsTable', () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      const groupsTable = screen.getByTestId('groups-table')
+      expect(groupsTable.getAttribute('data-createbuttontext')).toBe('Add group')
+    })
+
+    test('should open CreatePreAuthorizedIdentity for users when onCreateClick is triggered', async () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Create User Action' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Pre-Auth User Form')).toBeInTheDocument()
+      })
+    })
+
+    test('should open CreatePreAuthorizedIdentity for groups when onCreateClick is triggered', async () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Create Group Action' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Pre-Auth Group Form')).toBeInTheDocument()
+      })
+    })
   })
 })

@@ -253,4 +253,59 @@ describe('GroupsTable', () => {
 
     // The component should render without errors when no selectedGroup is provided
   })
+
+  describe('empty state create button', () => {
+    beforeEach(() => {
+      mockUseRecoilValue.mockReturnValue([])
+    })
+
+    test('should not show create button in empty state by default', async () => {
+      render(<Component />)
+
+      await waitFor(() => {
+        expect(screen.getByText('In order to view Groups, add Identity provider')).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('button', { name: 'Create group' })).not.toBeInTheDocument()
+    })
+
+    test('should show create button in empty state when isCreateButtonDisplayed is true', async () => {
+      const mockOnCreateClick = jest.fn()
+      render(<Component isCreateButtonDisplayed onCreateClick={mockOnCreateClick} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create group' })).toBeInTheDocument()
+      })
+    })
+
+    test('should show custom button text when createButtonText is provided', async () => {
+      const mockOnCreateClick = jest.fn()
+      render(<Component isCreateButtonDisplayed createButtonText="Add group" onCreateClick={mockOnCreateClick} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Add group' })).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('button', { name: 'Create group' })).not.toBeInTheDocument()
+    })
+
+    test('should call onCreateClick when create button is clicked', async () => {
+      const mockOnCreateClick = jest.fn()
+      render(<Component isCreateButtonDisplayed onCreateClick={mockOnCreateClick} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create group' })).toBeInTheDocument()
+      })
+
+      screen.getByRole('button', { name: 'Create group' }).click()
+      expect(mockOnCreateClick).toHaveBeenCalledTimes(1)
+    })
+
+    test('should not show create button when isCreateButtonDisplayed is true but onCreateClick is not provided', async () => {
+      render(<Component isCreateButtonDisplayed />)
+
+      await waitFor(() => {
+        expect(screen.getByText('In order to view Groups, add Identity provider')).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('button', { name: 'Create group' })).not.toBeInTheDocument()
+    })
+  })
 })

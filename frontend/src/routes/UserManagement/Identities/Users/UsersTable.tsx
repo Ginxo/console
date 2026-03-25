@@ -4,7 +4,7 @@ import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { User } from '../../../../resources/rbac'
 import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
-import { AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
+import { AcmButton, AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
 import { useFilters, usersTableColumns } from '../IdentityTableHelper'
 
 interface UsersTableProps {
@@ -13,6 +13,9 @@ interface UsersTableProps {
   selectedUser?: User
   setSelectedUser?: (user: User) => void
   additionalUsers?: User[]
+  isCreateButtonDisplayed?: boolean
+  createButtonText?: string
+  onCreateClick?: () => void
 }
 
 const UsersTable = ({
@@ -21,6 +24,9 @@ const UsersTable = ({
   selectedUser,
   setSelectedUser,
   additionalUsers,
+  isCreateButtonDisplayed,
+  createButtonText,
+  onCreateClick,
 }: UsersTableProps) => {
   const { t } = useTranslation()
   const { usersState } = useSharedAtoms()
@@ -83,6 +89,11 @@ const UsersTable = ({
           }
           action={
             <div>
+              {isCreateButtonDisplayed && onCreateClick && (
+                <AcmButton variant="primary" onClick={onCreateClick}>
+                  {createButtonText ?? t('Create user')}
+                </AcmButton>
+              )}
               <ViewDocumentationLink doclink={DOC_LINKS.IDENTITY_PROVIDER_CONFIGURATION} />
             </div>
           }
