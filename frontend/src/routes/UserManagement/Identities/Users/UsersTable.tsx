@@ -1,12 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { useCallback, useMemo } from 'react'
+import { AcmButton, AcmEmptyState, AcmTable, compareStrings, IAcmTableButtonAction } from '~/ui-components'
 import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { User } from '../../../../resources/rbac'
-import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
-import { AcmButton, AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
-import { IAcmTableButtonAction } from '../../../../ui-components/AcmTable/AcmTableTypes'
 import { useFilters, usersTableColumns } from '../IdentityTableHelper'
+import { useMergedUsers } from '../useMergedIdentities'
 
 interface UsersTableProps {
   hiddenColumns?: string[]
@@ -32,8 +31,8 @@ const UsersTable = ({
   tableActionButtons,
 }: UsersTableProps) => {
   const { t } = useTranslation()
-  const { usersState } = useSharedAtoms()
-  const rbacUsers = useRecoilValue(usersState)
+
+  const rbacUsers = useMergedUsers()
   const users = useMemo(() => {
     const all = [...(rbacUsers ?? []), ...(additionalUsers ?? [])]
     const unique = all.filter((u, i, arr) => arr.findIndex((x) => x.metadata.name === u.metadata.name) === i)

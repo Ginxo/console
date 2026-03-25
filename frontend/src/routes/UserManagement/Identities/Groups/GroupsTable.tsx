@@ -1,12 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { useCallback, useMemo } from 'react'
+import { AcmButton, AcmEmptyState, AcmTable, compareStrings, IAcmTableButtonAction } from '~/ui-components'
 import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { Group } from '../../../../resources/rbac'
-import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
-import { AcmButton, AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
-import { IAcmTableButtonAction } from '../../../../ui-components/AcmTable/AcmTableTypes'
 import { groupsTableColumns, useFilters } from '../IdentityTableHelper'
+import { useMergedGroups } from '../useMergedIdentities'
 
 interface GroupsTableProps {
   hiddenColumns?: string[]
@@ -33,8 +32,7 @@ const GroupsTable = ({
 }: GroupsTableProps) => {
   const { t } = useTranslation()
 
-  const { groupsState } = useSharedAtoms()
-  const groupsData = useRecoilValue(groupsState)
+  const groupsData = useMergedGroups()
   const groups = useMemo(() => {
     const all = [...(groupsData ?? []), ...(additionalGroups ?? [])]
     const unique = all.filter((g, i, arr) => arr.findIndex((x) => x.metadata.name === g.metadata.name) === i)

@@ -3,8 +3,46 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom-v5-compat'
 import { RecoilRoot } from 'recoil'
-import { IdentitiesList } from './IdentitiesList'
+import { Group, User } from '../../../resources/rbac'
+import { useMergedGroups, useMergedUsers } from '../../../routes/UserManagement/Identities/useMergedIdentities'
 import { useRecoilValue, useSharedAtoms } from '../../../shared-recoil'
+import { IdentitiesList } from './IdentitiesList'
+
+jest.mock('../../../routes/UserManagement/Identities/useMergedIdentities', () => ({
+  useMergedUsers: jest.fn(),
+  useMergedGroups: jest.fn(),
+}))
+
+const mockUseMergedUsers = useMergedUsers as jest.MockedFunction<typeof useMergedUsers>
+const mockUseMergedGroups = useMergedGroups as jest.MockedFunction<typeof useMergedGroups>
+
+const mockUsers: User[] = [
+  {
+    apiVersion: 'user.openshift.io/v1',
+    kind: 'User',
+    metadata: { name: 'alice', uid: 'alice-uid', creationTimestamp: '2025-01-01T00:00:00Z' },
+  },
+  {
+    apiVersion: 'user.openshift.io/v1',
+    kind: 'User',
+    metadata: { name: 'bob-mra', uid: 'bob-mra', creationTimestamp: '2025-02-01T00:00:00Z' },
+  },
+]
+
+const mockGroups: Group[] = [
+  {
+    apiVersion: 'user.openshift.io/v1',
+    kind: 'Group',
+    metadata: { name: 'developers', uid: 'dev-uid', creationTimestamp: '2025-01-01T00:00:00Z' },
+    users: ['alice'],
+  },
+  {
+    apiVersion: 'user.openshift.io/v1',
+    kind: 'Group',
+    metadata: { name: 'ops-mra', uid: 'ops-mra', creationTimestamp: '2025-02-01T00:00:00Z' },
+    users: [],
+  },
+]
 
 jest.mock('../../../lib/acm-i18next', () => ({
   useTranslation: () => ({
@@ -136,6 +174,8 @@ describe('IdentitiesList', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     setupMocks(false)
+    mockUseMergedUsers.mockReturnValue(mockUsers)
+    mockUseMergedGroups.mockReturnValue(mockGroups)
   })
 
   test('should render title and tableActionButtons for users', () => {
@@ -429,5 +469,83 @@ describe('IdentitiesList', () => {
         expect(screen.getByText('Pre-Auth Group Form')).toBeInTheDocument()
       })
     })
+  })
+
+  test('should preselect an RBAC user via initialSelectedIdentity', async () => {
+    const mockOnUserSelect = jest.fn()
+    render(<Component onUserSelect={mockOnUserSelect} initialSelectedIdentity={{ kind: 'User', name: 'alice' }} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Selected: alice/)).toBeInTheDocument()
+    })
+  })
+
+  test('should preselect an MRA-derived user via initialSelectedIdentity', async () => {
+    const mockOnUserSelect = jest.fn()
+    render(<Component onUserSelect={mockOnUserSelect} initialSelectedIdentity={{ kind: 'User', name: 'bob-mra' }} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Selected: bob-mra/)).toBeInTheDocument()
+    })
+  })
+
+  test('should preselect an RBAC group via initialSelectedIdentity', async () => {
+    const mockOnGroupSelect = jest.fn()
+    render(
+      <Component onGroupSelect={mockOnGroupSelect} initialSelectedIdentity={{ kind: 'Group', name: 'developers' }} />
+    )
+
+    await waitFor(() => {
+      const groupsTab = screen.getByRole('tab', { name: 'Groups tab' })
+      expect(groupsTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Selected: developers/)).toBeInTheDocument()
+    })
+  })
+
+  test('should preselect an MRA-derived group via initialSelectedIdentity', async () => {
+    const mockOnGroupSelect = jest.fn()
+    render(<Component onGroupSelect={mockOnGroupSelect} initialSelectedIdentity={{ kind: 'Group', name: 'ops-mra' }} />)
+
+    await waitFor(() => {
+      const groupsTab = screen.getByRole('tab', { name: 'Groups tab' })
+      expect(groupsTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Selected: ops-mra/)).toBeInTheDocument()
+    })
+  })
+
+  test('should activate Groups tab when initialSelectedIdentity is a Group', () => {
+    render(<Component initialSelectedIdentity={{ kind: 'Group', name: 'developers' }} />)
+
+    const groupsTab = screen.getByRole('tab', { name: 'Groups tab' })
+    expect(groupsTab).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('should activate Users tab when initialSelectedIdentity is a User', () => {
+    render(<Component initialSelectedIdentity={{ kind: 'User', name: 'alice' }} />)
+
+    const usersTab = screen.getByRole('tab', { name: 'Users tab' })
+    expect(usersTab).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('should not preselect when initialSelectedIdentity name does not match any identity', async () => {
+    render(<Component initialSelectedIdentity={{ kind: 'User', name: 'nonexistent' }} />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Selected:/)).not.toBeInTheDocument()
+    })
+  })
+
+  test('should render without errors when useMergedUsers returns empty', () => {
+    mockUseMergedUsers.mockReturnValue([])
+    mockUseMergedGroups.mockReturnValue([])
+
+    render(<Component />)
+    expect(screen.getByText('Identities')).toBeInTheDocument()
   })
 })
