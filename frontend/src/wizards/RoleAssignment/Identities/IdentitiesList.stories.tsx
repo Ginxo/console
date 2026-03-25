@@ -1,46 +1,81 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { Content, PageSection, Tab, Tabs, TabTitleText, Title } from '@patternfly/react-core'
+import {
+  Button,
+  PageSection,
+  Tab,
+  Tabs,
+  TabTitleText,
+  Title,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
+} from '@patternfly/react-core'
 import { Meta, StoryObj } from '@storybook/react'
 import React, { useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 
-const MockUsersTable = ({ onUserClick }: { onUserClick?: () => void }) => (
-  <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
-    <h3>Users Table (Mocked)</h3>
-    <p>This would show the actual users table with data</p>
-    <button onClick={onUserClick} style={{ marginTop: '0.5rem' }}>
-      Select Mock User
-    </button>
+const MockUsersTable = ({
+  onUserClick,
+  actionButton,
+}: {
+  onUserClick?: () => void
+  actionButton?: React.ReactNode
+}) => (
+  <div style={{ border: '1px dashed #ccc' }}>
+    {actionButton && (
+      <Toolbar>
+        <ToolbarContent>
+          <ToolbarItem>{actionButton}</ToolbarItem>
+        </ToolbarContent>
+      </Toolbar>
+    )}
+    <div style={{ padding: '1rem', textAlign: 'center' }}>
+      <h3>Users Table (Mocked)</h3>
+      <p>This would show the actual users table with data</p>
+      <button onClick={onUserClick} style={{ marginTop: '0.5rem' }}>
+        Select Mock User
+      </button>
+    </div>
   </div>
 )
 
-const MockGroupsTable = ({ onGroupClick }: { onGroupClick?: () => void }) => (
-  <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
-    <h3>Groups Table (Mocked)</h3>
-    <p>This would show the actual groups table with data</p>
-    <button onClick={onGroupClick} style={{ marginTop: '0.5rem' }}>
-      Select Mock Group
-    </button>
+const MockGroupsTable = ({
+  onGroupClick,
+  actionButton,
+}: {
+  onGroupClick?: () => void
+  actionButton?: React.ReactNode
+}) => (
+  <div style={{ border: '1px dashed #ccc' }}>
+    {actionButton && (
+      <Toolbar>
+        <ToolbarContent>
+          <ToolbarItem>{actionButton}</ToolbarItem>
+        </ToolbarContent>
+      </Toolbar>
+    )}
+    <div style={{ padding: '1rem', textAlign: 'center' }}>
+      <h3>Groups Table (Mocked)</h3>
+      <p>This would show the actual groups table with data</p>
+      <button onClick={onGroupClick} style={{ marginTop: '0.5rem' }}>
+        Select Mock Group
+      </button>
+    </div>
   </div>
 )
 
 interface MockedIdentitiesListProps {
+  isDirectAuthenticationEnabled?: boolean
   onUserSelect?: (user: any) => void
   onGroupSelect?: (group: any) => void
 }
 
-const linkStyle = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--pf-global--link--Color)',
-  textDecoration: 'underline',
-  cursor: 'pointer',
-  padding: 0,
-  font: 'inherit',
-} as const
-
-const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesListProps) => {
+const MockedIdentitiesList = ({
+  isDirectAuthenticationEnabled = false,
+  onUserSelect,
+  onGroupSelect,
+}: MockedIdentitiesListProps) => {
   const { t } = useTranslation()
   const [activeTabKey, setActiveTabKey] = useState<string | number>('users')
   const [showCreatePreAuthorizedUser, setShowCreatePreAuthorizedUser] = useState(false)
@@ -62,6 +97,18 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
     onGroupSelect?.(mockGroup)
   }
 
+  const userActionButton = (
+    <Button variant="primary" onClick={() => setShowCreatePreAuthorizedUser(true)}>
+      {isDirectAuthenticationEnabled ? t('Add pre-authorized user') : t('Create pre-authorized user')}
+    </Button>
+  )
+
+  const groupActionButton = (
+    <Button variant="primary" onClick={() => setShowCreatePreAuthorizedGroup(true)}>
+      {isDirectAuthenticationEnabled ? t('Add pre-authorized group') : t('Create pre-authorized group')}
+    </Button>
+  )
+
   return (
     <PageSection hasBodyWrapper={false}>
       <Title headingLevel="h1" size="lg" style={{ marginBottom: '0.5rem' }}>
@@ -71,13 +118,6 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick} aria-label={t('Identity selection tabs')}>
         <Tab eventKey="users" title={<TabTitleText>{t('Users')}</TabTitleText>} aria-label={t('Users tab')}>
           <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
-            <Content component="p" style={{ marginBottom: '1.5rem' }}>
-              {t('Select a user to assign this role, or ')}{' '}
-              <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedUser(true)}>
-                {t('Add pre-authorized user')}
-              </button>
-            </Content>
-
             {showCreatePreAuthorizedUser ? (
               <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
                 <h3>Create Pre-Authorized User (Mocked)</h3>
@@ -85,20 +125,13 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
                 <button onClick={() => setShowCreatePreAuthorizedUser(false)}>Submit</button>
               </div>
             ) : (
-              <MockUsersTable onUserClick={handleUserClick} />
+              <MockUsersTable onUserClick={handleUserClick} actionButton={userActionButton} />
             )}
           </div>
         </Tab>
 
         <Tab eventKey="groups" title={<TabTitleText>{t('Groups')}</TabTitleText>} aria-label={t('Groups tab')}>
           <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
-            <Content component="p" style={{ marginBottom: '1.5rem' }}>
-              {t('Select a group to assign this role, or ')}{' '}
-              <button type="button" style={linkStyle} onClick={() => setShowCreatePreAuthorizedGroup(true)}>
-                {t('Add pre-authorized group')}
-              </button>
-            </Content>
-
             {showCreatePreAuthorizedGroup ? (
               <div style={{ padding: '1rem', border: '1px dashed #ccc', textAlign: 'center' }}>
                 <h3>Create Pre-Authorized Group (Mocked)</h3>
@@ -106,7 +139,7 @@ const MockedIdentitiesList = ({ onUserSelect, onGroupSelect }: MockedIdentitiesL
                 <button onClick={() => setShowCreatePreAuthorizedGroup(false)}>Submit</button>
               </div>
             ) : (
-              <MockGroupsTable onGroupClick={handleGroupClick} />
+              <MockGroupsTable onGroupClick={handleGroupClick} actionButton={groupActionButton} />
             )}
           </div>
         </Tab>
@@ -119,6 +152,7 @@ const meta: Meta<typeof MockedIdentitiesList> = {
   title: 'Wizards/RoleAssignment/IdentitiesList',
   component: MockedIdentitiesList,
   argTypes: {
+    isDirectAuthenticationEnabled: { control: 'boolean' },
     onUserSelect: { action: 'onUserSelect' },
     onGroupSelect: { action: 'onGroupSelect' },
   },
@@ -130,6 +164,15 @@ type Story = StoryObj<typeof MockedIdentitiesList>
 
 export const Default: Story = {
   args: {
+    isDirectAuthenticationEnabled: false,
+    onUserSelect: (user) => console.log('User selected:', user),
+    onGroupSelect: (group) => console.log('Group selected:', group),
+  },
+}
+
+export const DirectAuthEnabled: Story = {
+  args: {
+    isDirectAuthenticationEnabled: true,
     onUserSelect: (user) => console.log('User selected:', user),
     onGroupSelect: (group) => console.log('Group selected:', group),
   },

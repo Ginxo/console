@@ -5,6 +5,7 @@ import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { User } from '../../../../resources/rbac'
 import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
 import { AcmButton, AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
+import { IAcmTableButtonAction } from '../../../../ui-components/AcmTable/AcmTableTypes'
 import { useFilters, usersTableColumns } from '../IdentityTableHelper'
 
 interface UsersTableProps {
@@ -16,6 +17,7 @@ interface UsersTableProps {
   isCreateButtonDisplayed?: boolean
   createButtonText?: string
   onCreateClick?: () => void
+  tableActionButtons?: IAcmTableButtonAction[]
 }
 
 const UsersTable = ({
@@ -27,6 +29,7 @@ const UsersTable = ({
   isCreateButtonDisplayed,
   createButtonText,
   onCreateClick,
+  tableActionButtons,
 }: UsersTableProps) => {
   const { t } = useTranslation()
   const { usersState } = useSharedAtoms()
@@ -69,6 +72,7 @@ const UsersTable = ({
       columns={columns}
       keyFn={keyFn}
       items={users}
+      tableActionButtons={tableActionButtons}
       resultView={{
         page: 1,
         loading: false,

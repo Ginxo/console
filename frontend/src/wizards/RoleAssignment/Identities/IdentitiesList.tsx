@@ -1,11 +1,12 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { Button, Content, PageSection, Tab, Tabs, TabTitleText, Title } from '@patternfly/react-core'
-import { useCallback, useEffect, useState } from 'react'
+import { ButtonVariant, PageSection, Tab, Tabs, TabTitleText, Title } from '@patternfly/react-core'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { Group, User } from '../../../resources/rbac'
 import { GroupsTable } from '../../../routes/UserManagement/Identities/Groups/GroupsTable'
 import { UsersTable } from '../../../routes/UserManagement/Identities/Users/UsersTable'
 import { useRecoilValue, useSharedAtoms } from '../../../shared-recoil'
+import { IAcmTableButtonAction } from '../../../ui-components/AcmTable/AcmTableTypes'
 import { CreatePreAuthorizedIdentity } from './CreatePreAuthorizedIdentity'
 
 interface IdentitiesListProps {
@@ -94,6 +95,30 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
     [handleOnGroupSelect]
   )
 
+  const userTableActionButtons = useMemo<IAcmTableButtonAction[]>(
+    () => [
+      {
+        id: 'create-pre-authorized-user',
+        title: isDirectAuthenticationEnabled ? t('Add pre-authorized user') : t('Create pre-authorized user'),
+        click: () => setShowCreatePreAuthorizedUser(true),
+        variant: ButtonVariant.primary,
+      },
+    ],
+    [isDirectAuthenticationEnabled, t]
+  )
+
+  const groupTableActionButtons = useMemo<IAcmTableButtonAction[]>(
+    () => [
+      {
+        id: 'create-pre-authorized-group',
+        title: isDirectAuthenticationEnabled ? t('Add pre-authorized group') : t('Create pre-authorized group'),
+        click: () => setShowCreatePreAuthorizedGroup(true),
+        variant: ButtonVariant.primary,
+      },
+    ],
+    [isDirectAuthenticationEnabled, t]
+  )
+
   return (
     <PageSection hasBodyWrapper={false}>
       <Title headingLevel="h1" size="lg" style={{ marginBottom: '0.5rem' }}>
@@ -103,13 +128,6 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick} aria-label={t('Identity selection tabs')}>
         <Tab eventKey="users" title={<TabTitleText>{t('Users')}</TabTitleText>} aria-label={t('Users tab')}>
           <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
-            <Content component="p" style={{ marginBottom: '1.5rem' }}>
-              {t('Select a user to assign this role, or ')}{' '}
-              <Button variant="link" isInline onClick={() => setShowCreatePreAuthorizedUser(true)}>
-                {t('Add pre-authorized user')}
-              </Button>
-            </Content>
-
             {showCreatePreAuthorizedUser ? (
               <CreatePreAuthorizedIdentity
                 subjectKind="User"
@@ -125,6 +143,7 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
                 isCreateButtonDisplayed={isDirectAuthenticationEnabled}
                 createButtonText={isDirectAuthenticationEnabled ? t('Add user') : undefined}
                 onCreateClick={() => setShowCreatePreAuthorizedUser(true)}
+                tableActionButtons={userTableActionButtons}
               />
             )}
           </div>
@@ -132,13 +151,6 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
 
         <Tab eventKey="groups" title={<TabTitleText>{t('Groups')}</TabTitleText>} aria-label={t('Groups tab')}>
           <div style={{ marginTop: 'var(--pf-t--global--spacer--md)' }}>
-            <Content component="p" style={{ marginBottom: '1.5rem' }}>
-              {t('Select a group to assign this role, or ')}{' '}
-              <Button variant="link" isInline onClick={() => setShowCreatePreAuthorizedGroup(true)}>
-                {t('Add pre-authorized group')}
-              </Button>
-            </Content>
-
             {showCreatePreAuthorizedGroup ? (
               <CreatePreAuthorizedIdentity
                 subjectKind="Group"
@@ -154,6 +166,7 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
                 isCreateButtonDisplayed={isDirectAuthenticationEnabled}
                 createButtonText={isDirectAuthenticationEnabled ? t('Add group') : undefined}
                 onCreateClick={() => setShowCreatePreAuthorizedGroup(true)}
+                tableActionButtons={groupTableActionButtons}
               />
             )}
           </div>

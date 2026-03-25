@@ -5,6 +5,7 @@ import { DOC_LINKS, ViewDocumentationLink } from '../../../../lib/doc-util'
 import { Group } from '../../../../resources/rbac'
 import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
 import { AcmButton, AcmEmptyState, AcmTable, compareStrings } from '../../../../ui-components'
+import { IAcmTableButtonAction } from '../../../../ui-components/AcmTable/AcmTableTypes'
 import { groupsTableColumns, useFilters } from '../IdentityTableHelper'
 
 interface GroupsTableProps {
@@ -16,6 +17,7 @@ interface GroupsTableProps {
   isCreateButtonDisplayed?: boolean
   createButtonText?: string
   onCreateClick?: () => void
+  tableActionButtons?: IAcmTableButtonAction[]
 }
 
 const GroupsTable = ({
@@ -27,6 +29,7 @@ const GroupsTable = ({
   isCreateButtonDisplayed,
   createButtonText,
   onCreateClick,
+  tableActionButtons,
 }: GroupsTableProps) => {
   const { t } = useTranslation()
 
@@ -70,6 +73,7 @@ const GroupsTable = ({
       columns={columns}
       keyFn={keyFn}
       items={groups}
+      tableActionButtons={tableActionButtons}
       resultView={{
         page: 1,
         loading: false,

@@ -1,9 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { render, screen, waitFor } from '@testing-library/react'
+import { ButtonVariant } from '@patternfly/react-core'
 import { MemoryRouter } from 'react-router-dom-v5-compat'
 import { RecoilRoot } from 'recoil'
 import { User } from '../../../../resources/rbac'
+import { IAcmTableButtonAction } from '../../../../ui-components/AcmTable/AcmTableTypes'
 import { UsersTable } from './UsersTable'
 import { useRecoilValue, useSharedAtoms } from '../../../../shared-recoil'
 
@@ -225,6 +227,55 @@ describe('UsersTable', () => {
         expect(screen.getByText('In order to view Users, add Identity provider')).toBeInTheDocument()
       })
       expect(screen.queryByRole('button', { name: 'Create user' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('tableActionButtons', () => {
+    test('should render table action buttons when provided', async () => {
+      const mockClick = jest.fn()
+      const tableActionButtons: IAcmTableButtonAction[] = [
+        {
+          id: 'create-pre-authorized-user',
+          title: 'Create pre-authorized user',
+          click: mockClick,
+          variant: ButtonVariant.primary,
+        },
+      ]
+      render(<Component tableActionButtons={tableActionButtons} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create pre-authorized user' })).toBeInTheDocument()
+      })
+    })
+
+    test('should call click handler when table action button is clicked', async () => {
+      const mockClick = jest.fn()
+      const tableActionButtons: IAcmTableButtonAction[] = [
+        {
+          id: 'create-pre-authorized-user',
+          title: 'Create pre-authorized user',
+          click: mockClick,
+          variant: ButtonVariant.primary,
+        },
+      ]
+      render(<Component tableActionButtons={tableActionButtons} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create pre-authorized user' })).toBeInTheDocument()
+      })
+
+      screen.getByRole('button', { name: 'Create pre-authorized user' }).click()
+      expect(mockClick).toHaveBeenCalledTimes(1)
+    })
+
+    test('should not render table action buttons when not provided', async () => {
+      render(<Component />)
+
+      await waitFor(() => {
+        expect(screen.getByText('alice.trask')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByRole('button', { name: 'Create pre-authorized user' })).not.toBeInTheDocument()
     })
   })
 })

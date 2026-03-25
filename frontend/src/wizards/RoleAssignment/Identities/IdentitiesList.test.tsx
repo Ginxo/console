@@ -61,9 +61,12 @@ jest.mock('../../../routes/UserManagement/Identities/Users/UsersTable', () => ({
           Select User
         </button>
       )}
-      {props.onCreateClick && (
-        <button onClick={props.onCreateClick}>Create User Action</button>
-      )}
+      {props.onCreateClick && <button onClick={props.onCreateClick}>Create User Action</button>}
+      {props.tableActionButtons?.map((btn: any) => (
+        <button key={btn.id} onClick={btn.click}>
+          {btn.title}
+        </button>
+      ))}
     </div>
   ),
 }))
@@ -90,9 +93,12 @@ jest.mock('../../../routes/UserManagement/Identities/Groups/GroupsTable', () => 
           Select Group
         </button>
       )}
-      {props.onCreateClick && (
-        <button onClick={props.onCreateClick}>Create Group Action</button>
-      )}
+      {props.onCreateClick && <button onClick={props.onCreateClick}>Create Group Action</button>}
+      {props.tableActionButtons?.map((btn: any) => (
+        <button key={btn.id} onClick={btn.click}>
+          {btn.title}
+        </button>
+      ))}
     </div>
   ),
 }))
@@ -132,12 +138,11 @@ describe('IdentitiesList', () => {
     setupMocks(false)
   })
 
-  test('should render title and per-tab descriptions', () => {
+  test('should render title and tableActionButtons for users', () => {
     render(<Component />)
 
     expect(screen.getByText('Identities')).toBeInTheDocument()
-    expect(screen.getByText(/Select a user to assign this role, or/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add pre-authorized user' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create pre-authorized user' })).toBeInTheDocument()
   })
 
   test('should render tabs for Users and Groups', () => {
@@ -155,22 +160,20 @@ describe('IdentitiesList', () => {
     expect(screen.getByText('Users Table (No Links)')).toBeInTheDocument()
   })
 
-  test('should switch to Groups tab and show group description', () => {
+  test('should switch to Groups tab and show tableActionButtons for groups', () => {
     render(<Component />)
 
     const groupsTab = screen.getByRole('tab', { name: 'Groups tab' })
     fireEvent.click(groupsTab)
 
     expect(groupsTab).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText(/Select a group to assign this role, or/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add pre-authorized group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create pre-authorized group' })).toBeInTheDocument()
   })
 
-  test('should show CreatePreAuthorizedIdentity for users when link is clicked', async () => {
+  test('should show CreatePreAuthorizedIdentity for users when button is clicked', async () => {
     render(<Component />)
 
-    const preAuthorizedLink = screen.getByRole('button', { name: 'Add pre-authorized user' })
-    fireEvent.click(preAuthorizedLink)
+    fireEvent.click(screen.getByRole('button', { name: 'Create pre-authorized user' }))
 
     await waitFor(() => {
       expect(screen.getByText('Pre-Auth User Form')).toBeInTheDocument()
@@ -178,17 +181,17 @@ describe('IdentitiesList', () => {
     expect(screen.queryByText('Users Table (No Links)')).not.toBeInTheDocument()
   })
 
-  test('should show CreatePreAuthorizedIdentity for groups when link is clicked', async () => {
+  test('should show CreatePreAuthorizedIdentity for groups when button is clicked', async () => {
     render(<Component />)
 
     const groupsTab = screen.getByRole('tab', { name: 'Groups tab' })
     fireEvent.click(groupsTab)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Add pre-authorized group' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Create pre-authorized group' })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized group' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create pre-authorized group' }))
 
     await waitFor(() => {
       expect(screen.getByText('Pre-Auth Group Form')).toBeInTheDocument()
@@ -198,7 +201,7 @@ describe('IdentitiesList', () => {
   test('should return to table when CreatePreAuthorizedIdentity is cancelled', async () => {
     render(<Component />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized user' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create pre-authorized user' }))
 
     await waitFor(() => {
       expect(screen.getByText('Pre-Auth User Form')).toBeInTheDocument()
@@ -215,7 +218,7 @@ describe('IdentitiesList', () => {
     const mockOnUserSelect = jest.fn()
     render(<Component onUserSelect={mockOnUserSelect} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized user' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create pre-authorized user' }))
 
     await waitFor(() => {
       expect(screen.getByText('Pre-Auth User Form')).toBeInTheDocument()
@@ -242,10 +245,10 @@ describe('IdentitiesList', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Add pre-authorized group' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Create pre-authorized group' })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized group' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create pre-authorized group' }))
 
     await waitFor(() => {
       expect(screen.getByText('Pre-Auth Group Form')).toBeInTheDocument()
@@ -268,7 +271,7 @@ describe('IdentitiesList', () => {
   test('should reset create form when switching tabs', async () => {
     render(<Component />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized user' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create pre-authorized user' }))
 
     await waitFor(() => {
       expect(screen.getByText('Pre-Auth User Form')).toBeInTheDocument()
@@ -316,6 +319,20 @@ describe('IdentitiesList', () => {
       const groupsTable = screen.getByTestId('groups-table')
       expect(groupsTable.getAttribute('data-iscreatebuttondisplayed')).toBe('false')
     })
+
+    test('should show "Create pre-authorized user" button in UsersTable', () => {
+      render(<Component />)
+
+      expect(screen.getByRole('button', { name: 'Create pre-authorized user' })).toBeInTheDocument()
+    })
+
+    test('should show "Create pre-authorized group" button in GroupsTable', () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      expect(screen.getByRole('button', { name: 'Create pre-authorized group' })).toBeInTheDocument()
+    })
   })
 
   describe('create button props when isDirectAuthenticationEnabled is true', () => {
@@ -355,6 +372,20 @@ describe('IdentitiesList', () => {
       expect(groupsTable.getAttribute('data-createbuttontext')).toBe('Add group')
     })
 
+    test('should show "Add pre-authorized user" button in UsersTable', () => {
+      render(<Component />)
+
+      expect(screen.getByRole('button', { name: 'Add pre-authorized user' })).toBeInTheDocument()
+    })
+
+    test('should show "Add pre-authorized group" button in GroupsTable', () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      expect(screen.getByRole('button', { name: 'Add pre-authorized group' })).toBeInTheDocument()
+    })
+
     test('should open CreatePreAuthorizedIdentity for users when onCreateClick is triggered', async () => {
       render(<Component />)
 
@@ -371,6 +402,28 @@ describe('IdentitiesList', () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
 
       fireEvent.click(screen.getByRole('button', { name: 'Create Group Action' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Pre-Auth Group Form')).toBeInTheDocument()
+      })
+    })
+
+    test('should open CreatePreAuthorizedIdentity for users via tableActionButtons', async () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized user' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Pre-Auth User Form')).toBeInTheDocument()
+      })
+    })
+
+    test('should open CreatePreAuthorizedIdentity for groups via tableActionButtons', async () => {
+      render(<Component />)
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add pre-authorized group' }))
 
       await waitFor(() => {
         expect(screen.getByText('Pre-Auth Group Form')).toBeInTheDocument()
