@@ -197,7 +197,7 @@ describe('CreatePreAuthorizedIdentity', () => {
 
       expect(
         screen.getByText(
-          "This role assignment will activate automatically on the user's first login. Once you proceed with the creation, the user will be created immediately."
+          'This user identifier will be used to match the external identity provider login and activate the role assignment. No user resource will be created.'
         )
       ).toBeInTheDocument()
     })
@@ -208,7 +208,7 @@ describe('CreatePreAuthorizedIdentity', () => {
 
       expect(
         screen.getByText(
-          "This role assignment will activate automatically on the group's first login. Once you proceed with the creation, the group will be created immediately."
+          'This group identifier will be used to match the external identity provider login and activate the role assignment. No group resource will be created.'
         )
       ).toBeInTheDocument()
     })
@@ -219,7 +219,7 @@ describe('CreatePreAuthorizedIdentity', () => {
 
       expect(
         screen.getByText(
-          'This user identifier will be used to match the external identity provider login and activate the role assignment. No user resource will be created.'
+          "This role assignment will activate automatically on the user's first login. Once you proceed with the creation, the user will be created immediately."
         )
       ).toBeInTheDocument()
     })
@@ -230,7 +230,7 @@ describe('CreatePreAuthorizedIdentity', () => {
 
       expect(
         screen.getByText(
-          'This group identifier will be used to match the external identity provider login and activate the role assignment. No group resource will be created.'
+          "This role assignment will activate automatically on the group's first login. Once you proceed with the creation, the group will be created immediately."
         )
       ).toBeInTheDocument()
     })

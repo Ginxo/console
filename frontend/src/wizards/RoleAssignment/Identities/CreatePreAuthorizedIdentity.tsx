@@ -12,18 +12,18 @@ function getDescriptionText(t: ReturnType<typeof useTranslation>['t'], isDirectA
   if (isDirectAuth) {
     return isUser
       ? t(
-          "This role assignment will activate automatically on the user's first login. Once you proceed with the creation, the user will be created immediately."
+          'This user identifier will be used to match the external identity provider login and activate the role assignment. No user resource will be created.'
         )
       : t(
-          "This role assignment will activate automatically on the group's first login. Once you proceed with the creation, the group will be created immediately."
+          'This group identifier will be used to match the external identity provider login and activate the role assignment. No group resource will be created.'
         )
   }
   return isUser
     ? t(
-        'This user identifier will be used to match the external identity provider login and activate the role assignment. No user resource will be created.'
+        "This role assignment will activate automatically on the user's first login. Once you proceed with the creation, the user will be created immediately."
       )
     : t(
-        'This group identifier will be used to match the external identity provider login and activate the role assignment. No group resource will be created.'
+        "This role assignment will activate automatically on the group's first login. Once you proceed with the creation, the group will be created immediately."
       )
 }
 
