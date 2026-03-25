@@ -92,7 +92,6 @@ describe('useMergedIdentities', () => {
       expect(result[0]).toEqual({
         apiVersion: 'user.openshift.io/v1',
         kind: 'User',
-        isOIDC: true,
         metadata: { name: 'mra-user-a', uid: 'mra-user-a', creationTimestamp: '2025-03-01T10:00:00Z' },
       })
     })
@@ -150,7 +149,6 @@ describe('useMergedIdentities', () => {
       expect(result[0]).toEqual({
         apiVersion: 'user.openshift.io/v1',
         kind: 'Group',
-        isOIDC: true,
         metadata: { name: 'mra-group-a', uid: 'mra-group-a', creationTimestamp: '2025-03-01T10:00:00Z' },
         users: [],
       })
@@ -227,19 +225,6 @@ describe('useMergedIdentities', () => {
       const { result } = renderHook(() => useMergedUsers())
       const bobEntries = result.current.filter((u) => u.metadata.name === 'bob')
       expect(bobEntries).toHaveLength(1)
-      expect(bobEntries[0].isOIDC).toBeUndefined()
-    })
-
-    it('should mark MRA-derived users with isOIDC=true', () => {
-      mockUseRecoilValue.mockImplementation((atom: any) => {
-        if (atom === usersAtom) return mockUsers
-        if (atom === mraAtom) return mockMras
-        return []
-      })
-
-      const { result } = renderHook(() => useMergedUsers())
-      const charlie = result.current.find((u) => u.metadata.name === 'charlie')
-      expect(charlie?.isOIDC).toBe(true)
     })
 
     it('should return only RBAC users when no MRAs exist', () => {
@@ -317,19 +302,6 @@ describe('useMergedIdentities', () => {
       const { result } = renderHook(() => useMergedGroups())
       const devsEntries = result.current.filter((g) => g.metadata.name === 'devs')
       expect(devsEntries).toHaveLength(1)
-      expect(devsEntries[0].isOIDC).toBeUndefined()
-    })
-
-    it('should mark MRA-derived groups with isOIDC=true', () => {
-      mockUseRecoilValue.mockImplementation((atom: any) => {
-        if (atom === groupsAtom) return mockGroups
-        if (atom === mraAtom) return mockMras
-        return []
-      })
-
-      const { result } = renderHook(() => useMergedGroups())
-      const ops = result.current.find((g) => g.metadata.name === 'ops')
-      expect(ops?.isOIDC).toBe(true)
     })
 
     it('should return only RBAC groups when no MRAs exist', () => {

@@ -9,8 +9,6 @@ import { getISOStringTimestamp } from '../../../../resources/utils'
 import { NavigationPath } from '../../../../NavigationPath'
 import { Link, generatePath } from 'react-router-dom-v5-compat'
 import { useFilters } from '../IdentityTableHelper'
-import { RoleAssignmentIdentityAlert } from '../RoleAssignmentIdentityAlert'
-import { useUserDetailsContext } from './UserPage'
 import { useUserGroups } from './useUserGroups'
 
 const renderGroupNameCell = (group: Group) => {
@@ -35,13 +33,8 @@ const renderGroupCreatedCell = (group: Group) => {
 
 const UserGroups = () => {
   const { t } = useTranslation()
-  const { user } = useUserDetailsContext()
   const { userGroups } = useUserGroups()
   const filters = useFilters('group', userGroups)
-
-  if (user?.isOIDC) {
-    return <RoleAssignmentIdentityAlert />
-  }
 
   const columns: IAcmTableColumn<Group>[] = [
     {

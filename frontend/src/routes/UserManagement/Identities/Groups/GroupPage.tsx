@@ -31,8 +31,9 @@ const GroupPage = () => {
   const location = useLocation()
 
   const group = useCurrentGroup()
-  const { usersState } = useSharedAtoms()
+  const { usersState, isDirectAuthenticationEnabledState } = useSharedAtoms()
   const users = useRecoilValue(usersState)
+  const isDirectAuth = useRecoilValue(isDirectAuthenticationEnabledState)
 
   const groupDetailsContext = useMemo<GroupDetailsContext>(
     () => ({
@@ -84,24 +85,32 @@ const GroupPage = () => {
                   isActive: isDetailsActive,
                   to: generatePath(NavigationPath.identitiesGroupsDetails, { id: id ?? '' }),
                 },
-                {
-                  key: 'user-mgmt-identities-groups-yaml',
-                  title: t('YAML'),
-                  isActive: isYamlActive,
-                  to: generatePath(NavigationPath.identitiesGroupsYaml, { id: id ?? '' }),
-                },
+                ...(!isDirectAuth
+                  ? [
+                      {
+                        key: 'user-mgmt-identities-groups-yaml',
+                        title: t('YAML'),
+                        isActive: isYamlActive,
+                        to: generatePath(NavigationPath.identitiesGroupsYaml, { id: id ?? '' }),
+                      },
+                    ]
+                  : []),
                 {
                   key: 'user-mgmt-identities-groups-role-assignments',
                   title: t('Role assignments'),
                   isActive: isRoleAssignmentsActive,
                   to: generatePath(NavigationPath.identitiesGroupsRoleAssignments, { id: id ?? '' }),
                 },
-                {
-                  key: 'user-mgmt-identities-groups-users',
-                  title: t('Users'),
-                  isActive: isUsersActive,
-                  to: generatePath(NavigationPath.identitiesGroupsUsers, { id: id ?? '' }),
-                },
+                ...(!isDirectAuth
+                  ? [
+                      {
+                        key: 'user-mgmt-identities-groups-users',
+                        title: t('Users'),
+                        isActive: isUsersActive,
+                        to: generatePath(NavigationPath.identitiesGroupsUsers, { id: id ?? '' }),
+                      },
+                    ]
+                  : []),
               ]}
             />
           }

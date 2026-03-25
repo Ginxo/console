@@ -240,15 +240,4 @@ describe('UserGroups', () => {
     expect(screen.queryByText('group-with-null-users')).not.toBeInTheDocument()
     expect(screen.queryByText('group-with-undefined-users')).not.toBeInTheDocument()
   })
-
-  it('renders alert when user is from OIDC', () => {
-    const oidcUser = createUser({ isOIDC: true })
-    setCtx({ user: oidcUser, groups: mockGroups })
-    renderWithCtx()
-
-    expect(screen.getByText("Can't display this information")).toBeInTheDocument()
-    expect(
-      screen.getByText("The identity is coming from external IDP and this information can't be displayed")
-    ).toBeInTheDocument()
-  })
 })

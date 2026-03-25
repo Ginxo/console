@@ -10,7 +10,6 @@ function identityFromMra(mra: MulticlusterRoleAssignment): IdentityItem {
   const { kind, name } = mra.spec.subject
   const base = {
     apiVersion: UserApiVersion,
-    isOIDC: true,
     metadata: {
       name,
       uid: name,

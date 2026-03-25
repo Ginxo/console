@@ -11,7 +11,6 @@ import { useGroupDetailsContext } from './GroupPage'
 import { NavigationPath } from '../../../../NavigationPath'
 import { Link, generatePath } from 'react-router-dom-v5-compat'
 import { useFilters } from '../IdentityTableHelper'
-import { RoleAssignmentIdentityAlert } from '../RoleAssignmentIdentityAlert'
 
 const renderUserNameCell = (user: User) => {
   return user.metadata.name ? (
@@ -50,10 +49,6 @@ const GroupUsers = () => {
       .filter((user) => groupUserNames.includes(user.metadata.name ?? ''))
       .sort((a, b) => compareStrings(a.metadata.name ?? '', b.metadata.name ?? ''))
   }, [group, users])
-
-  if (group?.isOIDC) {
-    return <RoleAssignmentIdentityAlert />
-  }
 
   const columns: IAcmTableColumn<User>[] = [
     {

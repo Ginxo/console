@@ -25,7 +25,6 @@ const mockUsers: User[] = [
     apiVersion: 'user.openshift.io/v1',
     kind: 'User',
     metadata: { name: 'bob-mra', uid: 'bob-mra', creationTimestamp: '2025-02-01T00:00:00Z' },
-    isOIDC: true,
   },
 ]
 
@@ -41,7 +40,6 @@ const mockGroups: Group[] = [
     kind: 'Group',
     metadata: { name: 'ops-mra', uid: 'ops-mra', creationTimestamp: '2025-02-01T00:00:00Z' },
     users: [],
-    isOIDC: true,
   },
 ]
 
