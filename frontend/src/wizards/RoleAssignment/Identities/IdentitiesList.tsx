@@ -140,7 +140,7 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
                 selectedUser={selectedUser}
                 setSelectedUser={handleOnUserSelect}
                 additionalUsers={additionalUsers}
-                isCreateButtonDisplayed={isDirectAuthenticationEnabled}
+                isCreateButtonDisplayed
                 createButtonText={isDirectAuthenticationEnabled ? t('Add user') : undefined}
                 onCreateClick={() => setShowCreatePreAuthorizedUser(true)}
                 tableActionButtons={userTableActionButtons}
@@ -163,7 +163,7 @@ export function IdentitiesList({ onUserSelect, onGroupSelect, initialSelectedIde
                 selectedGroup={selectedGroup}
                 setSelectedGroup={handleOnGroupSelect}
                 additionalGroups={additionalGroups}
-                isCreateButtonDisplayed={isDirectAuthenticationEnabled}
+                isCreateButtonDisplayed
                 createButtonText={isDirectAuthenticationEnabled ? t('Add group') : undefined}
                 onCreateClick={() => setShowCreatePreAuthorizedGroup(true)}
                 tableActionButtons={groupTableActionButtons}

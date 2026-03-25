@@ -304,20 +304,20 @@ describe('IdentitiesList', () => {
   })
 
   describe('create button props when isDirectAuthenticationEnabled is false', () => {
-    test('should not pass isCreateButtonDisplayed to UsersTable', () => {
+    test('should pass isCreateButtonDisplayed=true to UsersTable', () => {
       render(<Component />)
 
       const usersTable = screen.getByTestId('users-table')
-      expect(usersTable.getAttribute('data-iscreatebuttondisplayed')).toBe('false')
+      expect(usersTable.getAttribute('data-iscreatebuttondisplayed')).toBe('true')
     })
 
-    test('should not pass isCreateButtonDisplayed to GroupsTable', () => {
+    test('should pass isCreateButtonDisplayed=true to GroupsTable', () => {
       render(<Component />)
 
       fireEvent.click(screen.getByRole('tab', { name: 'Groups tab' }))
 
       const groupsTable = screen.getByTestId('groups-table')
-      expect(groupsTable.getAttribute('data-iscreatebuttondisplayed')).toBe('false')
+      expect(groupsTable.getAttribute('data-iscreatebuttondisplayed')).toBe('true')
     })
 
     test('should show "Create pre-authorized user" button in UsersTable', () => {
