@@ -8,6 +8,25 @@ import { AcmToastContext } from '../../../ui-components/AcmAlert/AcmToast'
 import { CreateIdentityForm } from './CreateIdentityForm'
 import { CreateIdentityFormDirectAuthentication } from './CreateIdentityFormDirectAuthentication'
 
+function getDescriptionText(t: ReturnType<typeof useTranslation>['t'], isDirectAuth: boolean, isUser: boolean): string {
+  if (isDirectAuth) {
+    return isUser
+      ? t(
+          "This role assignment will activate automatically on the user's first login. Once you proceed with the creation, the user will be created immediately."
+        )
+      : t(
+          "This role assignment will activate automatically on the group's first login. Once you proceed with the creation, the group will be created immediately."
+        )
+  }
+  return isUser
+    ? t(
+        'This user identifier will be used to match the external identity provider login and activate the role assignment. No user resource will be created.'
+      )
+    : t(
+        'This group identifier will be used to match the external identity provider login and activate the role assignment. No group resource will be created.'
+      )
+}
+
 function getSaveButtonText(t: ReturnType<typeof useTranslation>['t'], isDirectAuth: boolean, isUser: boolean): string {
   const texts = {
     addUser: t('Add pre-authorized user'),
@@ -69,9 +88,7 @@ export function CreatePreAuthorizedIdentity({ subjectKind, onClose, onSuccess }:
 
   return (
     <div>
-      <p style={{ marginBottom: '1rem' }}>
-        {t("This role assignment will activate automatically on the identity's first login.")}
-      </p>
+      <p style={{ marginBottom: '1rem' }}>{getDescriptionText(t, isDirectAuthenticationEnabled, isUser)}</p>
 
       {isDirectAuthenticationEnabled ? (
         <CreateIdentityFormDirectAuthentication

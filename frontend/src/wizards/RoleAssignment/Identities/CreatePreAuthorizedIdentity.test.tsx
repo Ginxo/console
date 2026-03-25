@@ -189,4 +189,50 @@ describe('CreatePreAuthorizedIdentity', () => {
 
     expect(screen.getByText('DirectAuthForm (User)')).toBeInTheDocument()
   })
+
+  describe('description text', () => {
+    it('shows direct auth user description when direct auth is enabled and subjectKind is User', () => {
+      setupMocks(true)
+      render(<CreatePreAuthorizedIdentity {...defaultProps} />)
+
+      expect(
+        screen.getByText(
+          "This role assignment will activate automatically on the user's first login. Once you proceed with the creation, the user will be created immediately."
+        )
+      ).toBeInTheDocument()
+    })
+
+    it('shows direct auth group description when direct auth is enabled and subjectKind is Group', () => {
+      setupMocks(true)
+      render(<CreatePreAuthorizedIdentity {...defaultProps} subjectKind="Group" />)
+
+      expect(
+        screen.getByText(
+          "This role assignment will activate automatically on the group's first login. Once you proceed with the creation, the group will be created immediately."
+        )
+      ).toBeInTheDocument()
+    })
+
+    it('shows external IDP user description when direct auth is disabled and subjectKind is User', () => {
+      setupMocks(false)
+      render(<CreatePreAuthorizedIdentity {...defaultProps} />)
+
+      expect(
+        screen.getByText(
+          'This user identifier will be used to match the external identity provider login and activate the role assignment. No user resource will be created.'
+        )
+      ).toBeInTheDocument()
+    })
+
+    it('shows external IDP group description when direct auth is disabled and subjectKind is Group', () => {
+      setupMocks(false)
+      render(<CreatePreAuthorizedIdentity {...defaultProps} subjectKind="Group" />)
+
+      expect(
+        screen.getByText(
+          'This group identifier will be used to match the external identity provider login and activate the role assignment. No group resource will be created.'
+        )
+      ).toBeInTheDocument()
+    })
+  })
 })
