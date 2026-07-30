@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { render } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { RecoilRoot } from 'recoil'
 import { MemoryRouter, Route, Routes } from 'react-router'
 
@@ -101,7 +101,12 @@ describe('Edit AI Cluster', () => {
 
     await waitForTestId('form-static-openshiftVersion-field')
 
-    await waitForText('ai:OpenShift 4.8.15-x86_64')
+    // AI lib renders "OpenShift" and the version as sibling text nodes; assert via textContent
+    await waitFor(() =>
+      expect(screen.getByTestId('form-static-openshiftVersion-field')).toHaveTextContent(
+        /(?:ai:)?OpenShift\s+4\.8\.15-x86_64/
+      )
+    )
 
     await waitForNocks(nocks)
   })
