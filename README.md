@@ -24,7 +24,7 @@ Go to the [Contributing guide](CONTRIBUTING.md) to learn how to get involved.
 
 - [Node.js](https://nodejs.org) 24 (see [`.nvmrc`](.nvmrc) and [`.tool-versions`](.tool-versions))
 - npm 10+
-- [Go](https://go.dev/dl/) 1.23+ (local Go backend; `npm ci` runs `go mod download` when `go` is on your `PATH`)
+- [Go](https://go.dev/dl/) 1.26+ (local Go backend; `npm ci` runs `go mod download` when `go` is on your `PATH`)
 - [openssl](https://www.openssl.org/) CLI (for `npm run generate-certs`)
 - [oc](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) (OpenShift CLI)
 - [podman](https://podman.io/) or [docker](https://www.docker.com/) (required for `npm run plugins`)

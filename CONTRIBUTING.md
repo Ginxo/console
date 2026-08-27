@@ -58,7 +58,7 @@ npm test
 
 Make sure your `kubectl` context is set to your target cluster and have Red Hat Advanced Cluster Management installed on the target cluster.
 
-Prerequisites match [README.md](README.md#prerequisites) (Node.js 24, Go 1.23+, openssl, `oc`, and podman/docker for plugin mode).
+Prerequisites match [README.md](README.md#prerequisites) (Node.js 24, Go 1.26+, openssl, `oc`, and podman/docker for plugin mode).
 
 #### First-time setup
 

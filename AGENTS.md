@@ -26,7 +26,7 @@ console/
 ## Prerequisites
 
 - **Node.js** (version pinned in `.nvmrc` and `.tool-versions`) and **npm**
-- **Go** (1.23+) for the console backend
+- **Go** (1.26+) for the console backend
 - **OpenShift 4.x cluster** with ACM or MCE installed for full functionality
 - **openssl** for certificate generation
 

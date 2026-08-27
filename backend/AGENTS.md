@@ -4,7 +4,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 
 ## Key Technologies
 
-- **Runtime**: Go 1.23+ (`net/http`; TLS enables HTTP/2 automatically)
+- **Runtime**: Go 1.26+ (`net/http`; TLS enables HTTP/2 automatically)
 - **Router**: `chi` — probes registered natively; everything else is `NotFound` → reverse proxy
 - **Proxy**: `httputil.ReverseProxy` (HTTP/1.1 to the sidecar so WebSocket upgrades work; `FlushInterval: -1` for SSE)
 - **Logging**: `log/slog` JSON (`method`, `path`, `status`, `duration`)
