@@ -44,7 +44,7 @@ After `oc login` to a new hub: `npm run setup:hub` (regenerates `.env` and certs
 
 | Command | Purpose |
 |---------|---------|
-| `npm start` | Start frontend + backend in standalone mode |
+| `npm start` | Start frontend + backend in standalone mode (Go live-reloads on `.go` changes) |
 | `npm run plugins` | Run as dynamic plugins with local OCP console (**recommended dev mode**) |
 | `npm test` | Run all tests (frontend + backend) |
 | `npm run check` | Run lint, format, and type checking across the entire project |

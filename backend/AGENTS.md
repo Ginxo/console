@@ -31,7 +31,7 @@ From the repo root (preferred), or `cd backend`:
 
 | Command | Purpose |
 |---------|---------|
-| `npm start` / `npm run plugins` | Go `:4000` in front of Node sidecar `:4001` |
+| `npm start` / `npm run plugins` | Go `:4000` in front of Node sidecar `:4001`. Air rebuilds and restarts Go when `cmd/` or `internal/` change |
 | `npm run test:backend` | `go test ./...` |
 | `npm run lint:backend` | `golangci-lint` (see `backend/.golangci.yml`) |
 | `npm run check:backend` | tests + golangci-lint |
