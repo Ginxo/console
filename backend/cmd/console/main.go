@@ -48,25 +48,6 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	restCfg, err := auth.RESTConfig(cfg, sa)
-	if err != nil {
-		return err
-	}
-	kube, err := kubernetes.NewForConfig(restCfg)
-	if err != nil {
-		return err
-	}
-	store := rbacevents.NewStore()
-	if err = rbacevents.StartInformer(ctx, kube, store); err != nil {
-		return err
-	}
-	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
-
-	handler, err := server.Handler(cfg, server.WithRBACEvents(rbacHandler))
-	if err != nil {
-		return err
-	}
-
 	applog.Logger().Info("process start",
 		"PORT", cfg.Port,
 		"NODE_BACKEND_URL", cfg.NodeBackendURL,

@@ -6,8 +6,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -106,51 +104,6 @@ func NewTokenReviewer(cfg *config.Config, sa ServiceAccount) (TokenReviewer, err
 	}
 	if len(sa.CACert) == 0 {
 		restCfg.TLSClientConfig.Insecure = true
-	}
-	return restCfg, nil
-}
-
-// UserRESTConfig copies base and impersonates the user via Bearer token.
-func UserRESTConfig(base *rest.Config, userToken string) *rest.Config {
-	c := rest.CopyConfig(base)
-	c.BearerToken = userToken
-	c.BearerTokenFile = ""
-	return c
-}
-
-// ValidateUserToken checks the token the same way the Node sidecar does: GET /api.
-// TokenReview is not used here because console-mce can create TokenReviews for some
-// identities that still fail Review, while GET /api matches /events auth.
-func ValidateUserToken(ctx context.Context, base *rest.Config, token string) error {
-	if base == nil {
-		return errors.New("rest config is required")
-	}
-	cfg := UserRESTConfig(base, token)
-	httpClient, err := rest.HTTPClientFor(cfg)
-	if err != nil {
-		return err
-	}
-	host := strings.TrimRight(cfg.Host, "/")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, host+"/api", nil)
-	if err != nil {
-		return err
-	}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("token validation status %d", resp.StatusCode)
-	}
-	return nil
-}
-
-// NewTokenReviewer builds a TokenReview client using the service account.
-func NewTokenReviewer(cfg *config.Config, sa ServiceAccount) (TokenReviewer, error) {
-	restCfg, err := RESTConfig(cfg, sa)
-	if err != nil {
-		return nil, err
 	}
 	client, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {
