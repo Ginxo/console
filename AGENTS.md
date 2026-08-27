@@ -86,7 +86,7 @@ Use `npm run plugins` for development; it matches the production deployment mode
 ## Code Quality Standards
 
 - TypeScript strict mode in frontend; `backend-node` uses `noImplicitAny` but not full strict mode
-- Go backend: `gofmt`, `go vet`, and `go test ./...` (`npm run check:backend`)
+- Go backend: `gofmt`, `golangci-lint`, and `go test ./...` (`npm run check:backend`)
 - ESLint with `@stolostron/eslint-config` (flat config)
 - Prettier with `@stolostron/prettier-config` (120 char width, no semicolons, single quotes)
 - Husky `commit-msg` hook enforces a `Signed-off-by` line on every commit

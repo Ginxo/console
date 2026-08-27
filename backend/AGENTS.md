@@ -33,8 +33,8 @@ From the repo root (preferred), or `cd backend`:
 |---------|---------|
 | `npm start` / `npm run plugins` | Go `:4000` in front of Node sidecar `:4001` |
 | `npm run test:backend` | `go test ./...` |
-| `npm run lint:backend` | `go vet ./...` |
-| `npm run check:backend` | tests + vet |
+| `npm run lint:backend` | `golangci-lint` (see `backend/.golangci.yml`) |
+| `npm run check:backend` | tests + golangci-lint |
 | `npm run build:backend` | `go build -o bin/console ./cmd/console` |
 | `npm run setup:hub` | Regenerate `backend/.env` and `backend/certs` after `oc login` to a new cluster |
 

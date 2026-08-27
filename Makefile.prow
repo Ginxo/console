@@ -14,11 +14,11 @@ build:
 
 .PHONY: check
 check:
-	npx concurrently --kill-others-on-fail npm:copyright:check npm:check:frontend npm:check:backend-node -c green,blue,magenta
+	npx concurrently --kill-others-on-fail npm:copyright:check npm:check:frontend npm:check:backend npm:check:backend-node -c green,blue,magenta
 
 .PHONY: lint
 lint:
-	npx concurrently --kill-others-on-fail npm:lint:frontend npm:lint:backend-node -c green,blue
+	npx concurrently --kill-others-on-fail npm:lint:frontend npm:lint:backend npm:lint:backend-node -c green,blue
 
 .PHONY: unit-tests
 unit-tests:
