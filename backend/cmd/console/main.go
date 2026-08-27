@@ -58,11 +58,7 @@ func run() error {
 	if err = rbacevents.StartInformer(ctx, kube, store); err != nil {
 		return err
 	}
-	reviewer, err := auth.NewTokenReviewer(cfg, sa)
-	if err != nil {
-		return err
-	}
-	rbacHandler := rbacevents.NewHandler(store, reviewer, rbacevents.NewSSARAccess(restCfg))
+	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
 
 	handler, err := server.Handler(cfg, server.WithRBACEvents(rbacHandler))
 	if err != nil {
