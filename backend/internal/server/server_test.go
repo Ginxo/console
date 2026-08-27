@@ -159,3 +159,44 @@ func TestWebSocketUpgradeForwardsOriginalPath(t *testing.T) {
 		t.Fatalf("upgrade %q", capturedUpgrade)
 	}
 }
+
+func TestRBACEventsNotProxied(t *testing.T) {
+	var proxied bool
+	sidecar := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proxied = true
+		w.WriteHeader(http.StatusTeapot)
+	}))
+	defer sidecar.Close()
+
+	rbac := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: {\"type\":\"START\"}\n\n"))
+	})
+	cfg := &config.Config{NodeBackendURL: sidecar.URL, CertsDir: t.TempDir()}
+	h, err := server.Handler(cfg, server.WithRBACEvents(rbac))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(h)
+	defer ts.Close()
+
+	for _, path := range []string{"/events/rbac", "/multicloud/events/rbac"} {
+		proxied = false
+		resp, err := ts.Client().Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if proxied {
+			t.Fatalf("%s was proxied to sidecar", path)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("%s status %d", path, resp.StatusCode)
+		}
+		if !strings.Contains(string(body), `"type":"START"`) {
+			t.Fatalf("%s body %s", path, body)
+		}
+	}
+}

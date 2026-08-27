@@ -38,7 +38,6 @@ import {
   ClusterPoolKind,
   ClusterProvisionApiVersion,
   ClusterProvisionKind,
-  ClusterRoleKind,
   ClusterVersionApiVersion,
   ClusterVersionKind,
   ConfigMapApiVersion,
@@ -95,7 +94,6 @@ import {
   PolicyReportKind,
   PolicySetApiVersion,
   PolicySetKind,
-  RbacApiVersion,
   SearchOperatorApiVersion,
   SearchOperatorKind,
   SecretApiVersion,
@@ -186,7 +184,6 @@ import {
   subscriptionReportsState,
   subscriptionsState,
   usersState,
-  vmClusterRolesState,
   WatchEvent,
 } from '../atoms'
 import { PluginDataContext } from '../lib/PluginDataContext'
@@ -228,7 +225,6 @@ export function LoadData(props: { children?: ReactNode }) {
   const setClusterManagementAddons = useSetRecoilState(clusterManagementAddonsState)
   const setClusterPools = useSetRecoilState(clusterPoolsState)
   const setClusterProvisions = useSetRecoilState(clusterProvisionsState)
-  const setVMClusterRoles = useSetRecoilState(vmClusterRolesState)
   const setClusterVerions = useSetRecoilState(clusterVersionState)
   const setConfigMaps = useSetRecoilState(configMapsState)
   const setDiscoveredClusters = useSetRecoilState(discoveredClusterState)
@@ -359,7 +355,6 @@ export function LoadData(props: { children?: ReactNode }) {
     addSetter(PolicyAutomationApiVersion, PolicyAutomationKind, setPolicyAutomationState)
     addSetter(PolicyReportApiVersion, PolicyReportKind, setPolicyReports)
     addSetter(PolicySetApiVersion, PolicySetKind, setPolicySetsState)
-    addSetter(RbacApiVersion, ClusterRoleKind, setVMClusterRoles)
     addSetter(SearchOperatorApiVersion, SearchOperatorKind, setSearchOperator)
     addSetter(SecretApiVersion, SecretKind, setSecrets)
     addSetter(ServiceApiVersion, ServiceKind, setServices)
@@ -392,7 +387,6 @@ export function LoadData(props: { children?: ReactNode }) {
     setClusterManagementAddons,
     setClusterPools,
     setClusterProvisions,
-    setVMClusterRoles,
     setClusterVerions,
     setConfigMaps,
     setDiscoveredClusters,

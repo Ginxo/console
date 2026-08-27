@@ -90,8 +90,8 @@ type kubeReviewer struct {
 	client kubernetes.Interface
 }
 
-// NewTokenReviewer builds a TokenReview client using the service account.
-func NewTokenReviewer(cfg *config.Config, sa ServiceAccount) (TokenReviewer, error) {
+// RESTConfig builds a client-go rest.Config from the service account.
+func RESTConfig(cfg *config.Config, sa ServiceAccount) (*rest.Config, error) {
 	if cfg.ClusterAPIURL == "" {
 		return nil, errors.New("CLUSTER_API_URL is not set")
 	}
@@ -104,6 +104,23 @@ func NewTokenReviewer(cfg *config.Config, sa ServiceAccount) (TokenReviewer, err
 	}
 	if len(sa.CACert) == 0 {
 		restCfg.TLSClientConfig.Insecure = true
+	}
+	return restCfg, nil
+}
+
+// UserRESTConfig copies base and impersonates the user via Bearer token.
+func UserRESTConfig(base *rest.Config, userToken string) *rest.Config {
+	c := rest.CopyConfig(base)
+	c.BearerToken = userToken
+	c.BearerTokenFile = ""
+	return c
+}
+
+// NewTokenReviewer builds a TokenReview client using the service account.
+func NewTokenReviewer(cfg *config.Config, sa ServiceAccount) (TokenReviewer, error) {
+	restCfg, err := RESTConfig(cfg, sa)
+	if err != nil {
+		return nil, err
 	}
 	client, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {

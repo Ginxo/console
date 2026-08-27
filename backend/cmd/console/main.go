@@ -12,8 +12,10 @@ import (
 
 	"github.com/stolostron/console/backend/internal/auth"
 	"github.com/stolostron/console/backend/internal/config"
+	rbacevents "github.com/stolostron/console/backend/internal/events/rbac"
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/server"
+	"k8s.io/client-go/kubernetes"
 )
 
 func main() {
@@ -27,7 +29,8 @@ func run() error {
 	cfg := config.Load()
 	applog.SetLevel(cfg.LogLevel)
 
-	if _, ok := auth.LoadServiceAccount(cfg); !ok {
+	sa, ok := auth.LoadServiceAccount(cfg)
+	if !ok {
 		applog.Logger().Error("service account token missing",
 			"msg", "set TOKEN or mount /var/run/secrets/kubernetes.io/serviceaccount/token")
 		return errMissingToken
@@ -40,13 +43,31 @@ func run() error {
 		defer stopWatch()
 	}
 
-	handler, err := server.Handler(cfg)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	restCfg, err := auth.RESTConfig(cfg, sa)
 	if err != nil {
 		return err
 	}
+	kube, err := kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+	store := rbacevents.NewStore()
+	if err := rbacevents.StartInformer(ctx, kube, store); err != nil {
+		return err
+	}
+	reviewer, err := auth.NewTokenReviewer(cfg, sa)
+	if err != nil {
+		return err
+	}
+	rbacHandler := rbacevents.NewHandler(store, reviewer, rbacevents.NewSSARAccess(restCfg))
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	handler, err := server.Handler(cfg, server.WithRBACEvents(rbacHandler))
+	if err != nil {
+		return err
+	}
 
 	applog.Logger().Info("process start",
 		"PORT", cfg.Port,

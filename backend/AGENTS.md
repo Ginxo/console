@@ -21,6 +21,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `internal/health` | `/ping`, `/livenessProbe` (Go only), `/readinessProbe` (Go + sidecar `/ping`) |
 | `internal/config` | `.env` + `config/` directory (filename = key) |
 | `internal/auth` | Cookie/Bearer, SA token/CA, TokenReview helper |
+| `internal/events/rbac` | `GET /events/rbac` SSE: ClusterRole informer (`vm-clusterroles` label) + per-user SSAR |
 | `internal/log` | slog JSON helper |
 | `config/` | Runtime settings shared with the Node sidecar |
 | `certs/` | TLS material (`npm run generate-certs` at repo root) |
@@ -47,6 +48,7 @@ Browser / OpenShift Console plugin
 Go backend :4000 (TLS / HTTP/2)
         ├─ GET /livenessProbe, /readinessProbe, /ping
         │    (also /multicloud/…)
+        ├─ GET /events/rbac (ClusterRole watch; also /multicloud/events/rbac)
         └─ everything else (original URL) ──HTTP/1.1──► Node sidecar :4001
                                                               │
                                                               ▼
