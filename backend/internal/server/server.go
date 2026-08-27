@@ -62,6 +62,10 @@ func isProbe(path string) bool {
 	}
 }
 
+func isEventStream(path string) bool {
+	return path == "/events/rbac"
+}
+
 // TLSConfigForSidecar is for the loopback Node sidecar. Local generate-certs
 // writes a self-signed cert with no SAN, so hostname verification cannot succeed.
 func TLSConfigForSidecar(_ *config.Config) *tls.Config {

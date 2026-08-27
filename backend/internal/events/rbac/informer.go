@@ -4,7 +4,6 @@ package rbac
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -12,6 +11,8 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	applog "github.com/stolostron/console/backend/internal/log"
 )
 
 const resync = 10 * time.Minute
@@ -57,8 +58,12 @@ func StartInformer(ctx context.Context, client kubernetes.Interface, store *Stor
 	}
 
 	factory.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
-		return fmt.Errorf("clusterrole informer cache sync failed")
+	syncCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	if !cache.WaitForCacheSync(syncCtx.Done(), informer.HasSynced) {
+		// Do not block the public listener: console-mce may lack clusterroles
+		// list/watch. SSE still serves a per-user list fallback.
+		applog.Logger().Error("clusterrole informer cache sync timed out; continuing")
 	}
 	return nil
 }

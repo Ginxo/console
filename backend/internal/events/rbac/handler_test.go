@@ -78,14 +78,14 @@ func TestStoreUpsertDelete(t *testing.T) {
 }
 
 func TestHandlerUnauthorized(t *testing.T) {
-	h := rbacevents.NewHandlerWithAuth(rbacevents.NewStore(), rbacevents.StaticAuth{OK: true}, rbacevents.AllowAllAccess{})
+	h := rbacevents.NewHandler(rbacevents.NewStore(), rbacevents.StaticAuth{OK: true}, rbacevents.AllowAllAccess{})
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/events/rbac", nil))
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status %d", rec.Code)
 	}
 
-	h = rbacevents.NewHandlerWithAuth(rbacevents.NewStore(), rbacevents.StaticAuth{OK: false}, rbacevents.AllowAllAccess{})
+	h = rbacevents.NewHandler(rbacevents.NewStore(), rbacevents.StaticAuth{OK: false}, rbacevents.AllowAllAccess{})
 	req := httptest.NewRequest(http.MethodGet, "/events/rbac", nil)
 	req.Header.Set("Authorization", "Bearer bad")
 	rec = httptest.NewRecorder()
@@ -98,7 +98,7 @@ func TestHandlerUnauthorized(t *testing.T) {
 func TestHandlerSnapshotSSE(t *testing.T) {
 	store := rbacevents.NewStore()
 	store.Upsert("ADDED", labeledRole("kubevirt.io:admin"))
-	h := rbacevents.NewHandlerWithAuth(store, rbacevents.StaticAuth{OK: true}, rbacevents.AllowAllAccess{})
+	h := rbacevents.NewHandler(store, rbacevents.StaticAuth{OK: true}, rbacevents.AllowAllAccess{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -129,6 +129,9 @@ func TestHandlerSnapshotSSE(t *testing.T) {
 	}
 	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
 		t.Fatalf("content-type %s", ct)
+	}
+	if cc := rec.Header().Get("Cache-Control"); !strings.Contains(cc, "no-transform") {
+		t.Fatalf("cache-control %s", cc)
 	}
 	for _, typ := range []string{"START", "ADDED", "EOP", "LOADED"} {
 		if !strings.Contains(body, `"type":"`+typ+`"`) {
@@ -164,7 +167,7 @@ func (denyAccess) CanSee(context.Context, string, *rbacv1.ClusterRole) (bool, er
 func TestHandlerSSARDenyOmitsRole(t *testing.T) {
 	store := rbacevents.NewStore()
 	store.Upsert("ADDED", labeledRole("secret-role"))
-	h := rbacevents.NewHandlerWithAuth(store, rbacevents.StaticAuth{OK: true}, denyAccess{})
+	h := rbacevents.NewHandler(store, rbacevents.StaticAuth{OK: true}, denyAccess{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	req := httptest.NewRequest(http.MethodGet, "/events/rbac", nil).WithContext(ctx)

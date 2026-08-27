@@ -9,6 +9,7 @@ import (
 	"time"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/client-go/rest"
 
 	"github.com/stolostron/console/backend/internal/auth"
 	applog "github.com/stolostron/console/backend/internal/log"
@@ -16,17 +17,29 @@ import (
 
 const keepAlive = 10 * time.Second
 
-// Authenticator validates a user token (TokenReview).
+// Authenticator validates a user token (GET /api, same as Node /events).
 type Authenticator interface {
 	Authenticate(ctx context.Context, token string) (bool, error)
 }
 
-type tokenReviewAuth struct {
-	reviewer auth.TokenReviewer
+// APIAuth validates the browser token with GET /api using the user Bearer token.
+type APIAuth struct {
+	base *rest.Config
 }
 
-func (t tokenReviewAuth) Authenticate(ctx context.Context, token string) (bool, error) {
-	return t.reviewer.Review(ctx, token)
+func NewAPIAuth(base *rest.Config) *APIAuth {
+	return &APIAuth{base: base}
+}
+
+func (a *APIAuth) Authenticate(ctx context.Context, token string) (bool, error) {
+	if a == nil || a.base == nil {
+		return false, nil
+	}
+	err := auth.ValidateUserToken(ctx, a.base, token)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // StaticAuth is for tests.
@@ -48,19 +61,15 @@ type Handler struct {
 	store  *Store
 	authn  Authenticator
 	access AccessChecker
+	base   *rest.Config
 }
 
-func NewHandler(store *Store, reviewer auth.TokenReviewer, access AccessChecker) *Handler {
-	return &Handler{
-		store:  store,
-		authn:  tokenReviewAuth{reviewer: reviewer},
-		access: access,
+func NewHandler(store *Store, authn Authenticator, access AccessChecker) *Handler {
+	h := &Handler{store: store, authn: authn, access: access}
+	if a, ok := authn.(*APIAuth); ok {
+		h.base = a.base
 	}
-}
-
-// NewHandlerWithAuth injects a test authenticator.
-func NewHandlerWithAuth(store *Store, authn Authenticator, access AccessChecker) *Handler {
-	return &Handler{store: store, authn: authn, access: access}
+	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +80,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, err := h.authn.Authenticate(r.Context(), token)
 	if err != nil || !ok {
+		applog.Logger().Warn("rbac events unauthorized", "error", err)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -81,9 +91,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Match Node /events so proxies do not gzip or buffer the stream.
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Cache-Control", "no-store, no-transform")
+	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
@@ -93,7 +104,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := writeSSE(w, flusher, watchPayload{Type: "START"}); err != nil {
 		return
 	}
-	for _, role := range h.store.List() {
+	for _, role := range h.snapshot(r.Context(), token) {
 		allowed, err := h.access.CanSee(r.Context(), token, role)
 		if err != nil {
 			applog.Logger().Warn("rbac ssar failed", "error", err, "name", role.Name)
@@ -160,4 +171,17 @@ func writeSSE(w http.ResponseWriter, flusher http.Flusher, payload watchPayload)
 	}
 	flusher.Flush()
 	return nil
+}
+
+func (h *Handler) snapshot(ctx context.Context, token string) []*rbacv1.ClusterRole {
+	roles := h.store.List()
+	if len(roles) > 0 || h.base == nil {
+		return roles
+	}
+	listed, err := listVMClusterRolesForToken(ctx, h.base, token)
+	if err != nil {
+		applog.Logger().Warn("rbac user list fallback failed", "error", err)
+		return roles
+	}
+	return listed
 }
