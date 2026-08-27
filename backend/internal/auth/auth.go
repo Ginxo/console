@@ -21,6 +21,9 @@ import (
 
 const (
 	AccessTokenCookie = "acm-access-token-cookie"
+
+	bearerSchemePrefix    = "Bearer " // RFC 6750 Authorization header scheme prefix
+	bearerSchemePrefixLen = len(bearerSchemePrefix)
 )
 
 var serviceAccountBaseDir = "/var/run/secrets/kubernetes.io/serviceaccount"
@@ -75,8 +78,8 @@ func TokenFromRequest(r *http.Request) string {
 		return c.Value
 	}
 	authz := r.Header.Get("Authorization")
-	if len(authz) > 7 && strings.EqualFold(authz[:7], "Bearer ") {
-		return strings.TrimSpace(authz[7:])
+	if len(authz) > bearerSchemePrefixLen && strings.EqualFold(authz[:bearerSchemePrefixLen], bearerSchemePrefix) {
+		return strings.TrimSpace(authz[bearerSchemePrefixLen:])
 	}
 	return ""
 }
