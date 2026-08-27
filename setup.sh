@@ -6,19 +6,21 @@
 source ./port-defaults.sh
 source ./oauth-client-name.sh
 
-echo > ./backend-node/.env
+echo > ./backend/.env
 
-echo PORT="${BACKEND_PORT}" >> ./backend-node/.env
-echo NODE_ENV=development >> ./backend-node/.env
+echo PORT="${BACKEND_PORT}" >> ./backend/.env
+echo NODE_BACKEND_PORT="${NODE_BACKEND_PORT}" >> ./backend/.env
+echo NODE_BACKEND_URL="https://127.0.0.1:${NODE_BACKEND_PORT}" >> ./backend/.env
+echo NODE_ENV=development >> ./backend/.env
 
 CLUSTER_API_URL=`oc get infrastructure cluster -o jsonpath={.status.apiServerURL}`
-echo CLUSTER_API_URL=$CLUSTER_API_URL >> ./backend-node/.env
+echo CLUSTER_API_URL=$CLUSTER_API_URL >> ./backend/.env
 
 OAUTH2_REDIRECT_URL=https://localhost:${FRONTEND_PORT}/multicloud/login/callback
-echo OAUTH2_REDIRECT_URL=$OAUTH2_REDIRECT_URL >> ./backend-node/.env
+echo OAUTH2_REDIRECT_URL=$OAUTH2_REDIRECT_URL >> ./backend/.env
 
 FRONTEND_URL=https://localhost:${FRONTEND_PORT}
-echo FRONTEND_URL=$FRONTEND_URL >> ./backend-node/.env
+echo FRONTEND_URL=$FRONTEND_URL >> ./backend/.env
 
 INSTALLATION_NAMESPACE=`oc get multiclusterhub -A -o jsonpath='{.items[0].metadata.namespace}' || true`
 INSTALLATION_NAMESPACE_MCE=`oc get multiclusterengine -A -o jsonpath='{.items[0].spec.targetNamespace}'`
@@ -44,9 +46,9 @@ SA_TOKEN=`oc get secret -n $INSTALLATION_NAMESPACE_MCE ${SA_SECRET} -o="jsonpath
 CA_CERT=`oc get secret -n $INSTALLATION_NAMESPACE_MCE ${SA_SECRET} -o="jsonpath={.data.ca\.crt}"`
 SERVICE_CA_CERT=`oc get secret -n $INSTALLATION_NAMESPACE_MCE ${SA_SECRET} -o="jsonpath={.data.service-ca\.crt}"`
 
-echo TOKEN=$SA_TOKEN >> ./backend-node/.env
-echo CA_CERT=$CA_CERT >> ./backend-node/.env
-echo SERVICE_CA_CERT=$SERVICE_CA_CERT >> ./backend-node/.env
+echo TOKEN=$SA_TOKEN >> ./backend/.env
+echo CA_CERT=$CA_CERT >> ./backend/.env
+echo SERVICE_CA_CERT=$SERVICE_CA_CERT >> ./backend/.env
 
 # Look up or create service account token secret for openshift-console console ServiceAccount
 CONSOLE_SA="console"
@@ -72,11 +74,11 @@ if [[ "$AUTH" == "oidc" ]]; then
   OIDC_CLIENT_SECRET_NAME=$(echo "$OIDC_CLIENT" | jq -r '.clientSecret.name')
   OAUTH2_CLIENT_SECRET=$(oc get secret "$OIDC_CLIENT_SECRET_NAME" -n openshift-config -o jsonpath='{.data.clientSecret}' | base64 -d)
   OIDC_ISSUER_URL=$(echo "$OIDC_PROVIDER" | jq -r '.issuer.issuerURL')
-  echo OAUTH2_CLIENT_ID=$OAUTH2_CLIENT_ID >> ./backend-node/.env
-  echo OAUTH2_CLIENT_SECRET=$OAUTH2_CLIENT_SECRET >> ./backend-node/.env
-  echo OIDC_ISSUER_URL=$OIDC_ISSUER_URL >> ./backend-node/.env
+  echo OAUTH2_CLIENT_ID=$OAUTH2_CLIENT_ID >> ./backend/.env
+  echo OAUTH2_CLIENT_SECRET=$OAUTH2_CLIENT_SECRET >> ./backend/.env
+  echo OIDC_ISSUER_URL=$OIDC_ISSUER_URL >> ./backend/.env
 else
-  echo OAUTH2_CLIENT_ID=$OAUTH_CLIENT_NAME >> ./backend-node/.env
+  echo OAUTH2_CLIENT_ID=$OAUTH_CLIENT_NAME >> ./backend/.env
 
   # Create or update OAuthClient
   REDIRECT_URL=http://localhost:${CONSOLE_PORT}/auth/callback
@@ -108,8 +110,8 @@ EOF
     oc patch OAuthClient $OAUTH_CLIENT_NAME --type json -p "[{\"op\": \"add\", \"path\": \"/redirectURIs\", \"value\": ${REDIRECT_URIS}}]"
   fi
 
-  printf "OAUTH2_CLIENT_SECRET=" >> ./backend-node/.env
-  oc get OAuthClient $OAUTH_CLIENT_NAME -o jsonpath='{.secret}{"\n"}' >> ./backend-node/.env
+  printf "OAUTH2_CLIENT_SECRET=" >> ./backend/.env
+  oc get OAuthClient $OAUTH_CLIENT_NAME -o jsonpath='{.secret}{"\n"}' >> ./backend/.env
 fi
 
 # Create route to the search-api service on the target cluster.
@@ -129,7 +131,7 @@ spec:
     insecureEdgeTerminationPolicy: Redirect
 EOF
   SEARCH_API_URL=https://$(oc get route search-api -n $INSTALLATION_NAMESPACE -o="jsonpath={.status.ingress[0].host}")
-  echo SEARCH_API_URL=$SEARCH_API_URL >> ./backend-node/.env
+  echo SEARCH_API_URL=$SEARCH_API_URL >> ./backend/.env
 fi
 
 # Create NetworkPolicy to allow access to the search-api service.
@@ -173,16 +175,16 @@ spec:
     insecureEdgeTerminationPolicy: Redirect
 EOF
 PLACEMENT_DEBUG_URL=https://$(oc get route cluster-manager-placement -n open-cluster-management-hub -o="jsonpath={.status.ingress[0].host}")/debug/placements/
-echo PLACEMENT_DEBUG_URL=$PLACEMENT_DEBUG_URL >> ./backend-node/.env
+echo PLACEMENT_DEBUG_URL=$PLACEMENT_DEBUG_URL >> ./backend/.env
 
 CLUSTER_PROXY_ADDON_USER_HOST=$(oc get route cluster-proxy-addon-user -n $INSTALLATION_NAMESPACE_MCE -o="jsonpath={.status.ingress[0].host}")
-echo CLUSTER_PROXY_ADDON_USER_HOST=$CLUSTER_PROXY_ADDON_USER_HOST >> ./backend-node/.env
+echo CLUSTER_PROXY_ADDON_USER_HOST=$CLUSTER_PROXY_ADDON_USER_HOST >> ./backend/.env
 CLUSTER_PROXY_ADDON_USER_ROUTE=https://$CLUSTER_PROXY_ADDON_USER_HOST
-echo CLUSTER_PROXY_ADDON_USER_ROUTE=$CLUSTER_PROXY_ADDON_USER_ROUTE >> ./backend-node/.env
+echo CLUSTER_PROXY_ADDON_USER_ROUTE=$CLUSTER_PROXY_ADDON_USER_ROUTE >> ./backend/.env
 
 # ACM Observability will need to be installed first to set this env variable. Instructions: https://github.com/stolostron/multicluster-observability-operator
 OBSERVABILITY_ROUTE=https://$(oc get route rbac-query-proxy -n open-cluster-management-observability -o="jsonpath={.status.ingress[0].host}")
-echo OBSERVABILITY_ROUTE=$OBSERVABILITY_ROUTE >> ./backend-node/.env
+echo OBSERVABILITY_ROUTE=$OBSERVABILITY_ROUTE >> ./backend/.env
 
 PROMETHEUS_ROUTE=https://$(oc get route prometheus-k8s -n openshift-monitoring -o="jsonpath={.status.ingress[0].host}")
-echo PROMETHEUS_ROUTE=$PROMETHEUS_ROUTE >> ./backend-node/.env
+echo PROMETHEUS_ROUTE=$PROMETHEUS_ROUTE >> ./backend/.env

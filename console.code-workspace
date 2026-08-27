@@ -4,6 +4,9 @@
             "path": "frontend"
         },
         {
+            "path": "backend"
+        },
+        {
             "path": "backend-node"
         },
         {
