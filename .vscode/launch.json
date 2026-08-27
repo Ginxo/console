@@ -38,7 +38,7 @@
     },
     {
       "type": "node",
-      "name": "vscode-jest-tests.v2.backend",
+      "name": "vscode-jest-tests.v2.backend-node",
       "request": "launch",
       "args": [
         "--runInBand",
@@ -49,10 +49,10 @@
         "--runTestsByPath",
         "${jest.testFile}"
       ],
-      "cwd": "${workspaceFolder}/backend",
+      "cwd": "${workspaceFolder}/backend-node",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "program": "${workspaceFolder}/backend/node_modules/.bin/jest"
+      "program": "${workspaceFolder}/backend-node/node_modules/.bin/jest"
     }
   ]
 }

@@ -16,7 +16,7 @@ console/
 │       ├── react-form-wizard/  # @patternfly-labs/react-form-wizard
 │       ├── eslint-config/      # @stolostron/eslint-config
 │       └── prettier-config/    # @stolostron/prettier-config
-├── backend/                  # Node.js ESM proxy server
+├── backend-node/                  # Node.js ESM proxy server
 ├── docs/                     # Architecture documentation
 ├── scripts/                  # Build and development scripts
 └── resources/                # Sample K8s YAML fixtures
@@ -31,7 +31,7 @@ console/
 ## Setup
 
 ```bash
-npm run setup   # Configure cluster connection (creates backend/.env)
+npm run setup   # Configure cluster connection (creates backend-node/.env)
 npm ci          # Install dependencies for frontend and backend
 ```
 
@@ -131,6 +131,6 @@ Features can be enabled/disabled via the `console-config` ConfigMap in the insta
 
 ## Troubleshooting
 
-- **Certificate errors** — Remove `backend/certs/` and run `npm run ci:backend` to regenerate
+- **Certificate errors** — Remove `backend-node/certs/` and run `npm run ci:backend` to regenerate
 - **Module resolution errors** — Verify Node.js and npm versions match `.nvmrc` / `.tool-versions`; version mismatches break ESM resolution
-- **Missing `.env`** — Run `npm run setup` to generate `backend/.env` with cluster connection details
+- **Missing `.env`** — Run `npm run setup` to generate `backend-node/.env` with cluster connection details

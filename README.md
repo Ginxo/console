@@ -87,7 +87,7 @@ The recommended way to run the console for development is as OpenShift Console d
     npm run setup
     ```
 
-    This will create a `.env` file in the `backend` directory containing environment variables for the cluster connection.
+    This will create a `.env` file in the `backend-node` directory containing environment variables for the cluster connection.
 
 4. Start the console plugins
 
@@ -293,7 +293,7 @@ This is due to wrong node/npm set of versions. See [Prerequisites section](#prer
 
 ### `[start:backend] ERROR:Error reading service account token`
 
-After executing the `npm start` command (either at the root level of the project or at `./backend` folder) an error on `backend` project is produced like
+After executing the `npm start` command (either at the root level of the project or at `./backend-node` folder) an error on `backend` project is produced like
 
 ```text
 [start:backend] ERROR:Error reading service account token
@@ -301,7 +301,7 @@ After executing the `npm start` command (either at the root level of the project
 [start:backend] [nodemon] app crashed - waiting for file changes before starting...
 ```
 
-`./backend/.env` file is not present or it is wrongly produced. Please follow [Running section guidelines](#running-recommended-openshift-console-plugins).
+`./backend-node/.env` file is not present or it is wrongly produced. Please follow [Running section guidelines](#running-recommended-openshift-console-plugins).
 
 ### Certs issues
 
@@ -318,9 +318,9 @@ And if the logs are inspected right after running `npm start` command an error i
 
 `[start:backend] ERROR:no certs`
 
-The problem is about the certs not being generated properly, `./backend/certs` folder is most probably empty.
+The problem is about the certs not being generated properly, `./backend-node/certs` folder is most probably empty.
 
-The solution is to completely remove `./backend/certs` folder and then execute `npm run ci:backend` at the root level of the project.
+The solution is to completely remove `./backend-node/certs` folder and then execute `npm run ci:backend` at the root level of the project.
 
 > Be sure openssl library is installed before running `npm run ci:backend` command.
 
