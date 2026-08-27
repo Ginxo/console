@@ -109,8 +109,7 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 func requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		stripped := StripMulticloud(r.URL.Path)
-		// Do not wrap SSE: the wrapper can prevent HTTP/2 from flushing events to EventSource.
-		if isProbe(stripped) || isEventStream(stripped) {
+		if isProbe(stripped) {
 			next.ServeHTTP(w, r)
 			return
 		}

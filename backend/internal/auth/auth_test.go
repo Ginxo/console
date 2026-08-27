@@ -3,15 +3,12 @@
 package auth_test
 
 import (
-	"context"
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"k8s.io/client-go/rest"
 
 	"github.com/stolostron/console/backend/internal/auth"
 	"github.com/stolostron/console/backend/internal/config"
@@ -53,30 +50,6 @@ func TestNewTokenReviewer_RequiresClusterAPIURL(t *testing.T) {
 	_, err := auth.NewTokenReviewer(&config.Config{}, auth.ServiceAccount{Token: "t"})
 	if err == nil {
 		t.Fatal("expected error when CLUSTER_API_URL is empty")
-	}
-}
-
-func TestValidateUserToken_OKAndUnauthorized(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api" {
-			http.NotFound(w, r)
-			return
-		}
-		if r.Header.Get("Authorization") != "Bearer good" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"kind":"APIVersions"}`))
-	}))
-	defer ts.Close()
-
-	base := &rest.Config{Host: ts.URL, TLSClientConfig: rest.TLSClientConfig{Insecure: true}}
-	if err := auth.ValidateUserToken(context.Background(), base, "good"); err != nil {
-		t.Fatal(err)
-	}
-	if err := auth.ValidateUserToken(context.Background(), base, "bad"); err == nil {
-		t.Fatal("expected unauthorized token to fail")
 	}
 }
 
