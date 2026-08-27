@@ -55,7 +55,7 @@ func run() error {
 		return err
 	}
 	store := rbacevents.NewStore()
-	if err := rbacevents.StartInformer(ctx, kube, store); err != nil {
+	if err = rbacevents.StartInformer(ctx, kube, store); err != nil {
 		return err
 	}
 	reviewer, err := auth.NewTokenReviewer(cfg, sa)

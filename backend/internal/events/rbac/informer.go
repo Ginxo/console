@@ -16,7 +16,7 @@ import (
 
 const resync = 10 * time.Minute
 
-// StartInformer watches vm-clusterroles ClusterRoles into store until ctx is cancelled.
+// StartInformer watches vm-clusterroles ClusterRoles into store until ctx is canceled.
 func StartInformer(ctx context.Context, client kubernetes.Interface, store *Store) error {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		client,

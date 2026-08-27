@@ -183,9 +183,9 @@ func TestRBACEventsNotProxied(t *testing.T) {
 
 	for _, path := range []string{"/events/rbac", "/multicloud/events/rbac"} {
 		proxied = false
-		resp, err := ts.Client().Get(ts.URL + path)
-		if err != nil {
-			t.Fatal(err)
+		resp, getErr := ts.Client().Get(ts.URL + path)
+		if getErr != nil {
+			t.Fatal(getErr)
 		}
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
