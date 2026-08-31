@@ -18,7 +18,6 @@ import { configure } from './routes/configure'
 import { events, startWatching, stopWatching } from './routes/events'
 import { hub } from './routes/hub'
 import { liveness } from './routes/liveness'
-import { observabilityProxy, prometheusProxy } from './routes/metricsProxy'
 import { multiClusterHubComponents } from './routes/multiClusterHubComponents'
 import { login, loginCallback, logout } from './routes/oauth'
 import { operatorCheck } from './routes/operatorCheck'
@@ -30,8 +29,6 @@ import { serveHandler } from './routes/serve'
 import { upgradeRiskPredictions } from './routes/upgrade-risks-prediction'
 import { username } from './routes/username'
 import { userpreference } from './routes/userpreference'
-import { virtualMachineGETProxy, virtualMachineProxy, vmResourceUsageProxy } from './routes/virtualMachineProxy'
-import { managedClusterProxy } from './routes/managedClusterProxy'
 import { hypershiftStatus } from './routes/hypershift-status'
 import { clusterVersion } from './routes/clusterVersion'
 import { watchTLSSecurityProfile } from './lib/tlsProfileWatch'
@@ -70,8 +67,6 @@ router.get('/apiPaths', apiPaths)
 router.get('/version', proxy)
 router.get('/version/', proxy)
 router.post('/operatorCheck', operatorCheck)
-router.get('/observability/*', observabilityProxy)
-router.get('/prometheus/*', prometheusProxy)
 if (!isProduction) {
   router.get('/configure', configure)
   router.get('/login', login)
@@ -93,16 +88,8 @@ router.get('/hypershift-status', hypershiftStatus)
 router.get('/cluster-version', clusterVersion)
 router.post('/upgrade-risks-prediction', upgradeRiskPredictions)
 router.post('/aggregate/*', aggregate)
-router.get('/virtualmachines/get/*', virtualMachineGETProxy)
-router.all('/virtualmachines/*', virtualMachineProxy)
-router.all('/virtualmachineinstances/*', virtualMachineProxy)
-router.get('/virtualmachinesnapshots/get/*', virtualMachineGETProxy)
-router.all('/virtualmachinesnapshots/*', virtualMachineProxy)
-router.all('/virtualmachinerestores', virtualMachineProxy)
-router.get('/vmResourceUsage/cluster/:cluster/namespace/:namespace', vmResourceUsageProxy)
 router.get('/multiclusterhub/components', multiClusterHubComponents)
 router.get('/multiclusterengine/components', multiClusterEngineComponents)
-router.all('/managedclusterproxy/*', managedClusterProxy)
 
 // rosa wizard routes
 router.post('/aws-account-ids', getAwsAccountIds)
