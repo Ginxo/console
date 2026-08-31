@@ -21,12 +21,14 @@ import (
 	"github.com/stolostron/console/backend/internal/health"
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/proxy"
+	"github.com/stolostron/console/backend/internal/static"
 )
 
 const multicloudPrefix = "/multicloud"
 
 type handlerOptions struct {
 	rbacEvents http.Handler
+	staticH    http.Handler
 }
 
 // Option configures Handler.
@@ -36,6 +38,13 @@ type Option func(*handlerOptions)
 func WithRBACEvents(h http.Handler) Option {
 	return func(o *handlerOptions) {
 		o.rbacEvents = h
+	}
+}
+
+// WithStatic serves plugin and SPA files for GET requests with known static extensions.
+func WithStatic(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.staticH = h
 	}
 }
 
@@ -101,9 +110,22 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 		r.Get("/events/rbac", o.rbacEvents.ServeHTTP)
 		r.Get(multicloudPrefix+"/events/rbac", o.rbacEvents.ServeHTTP)
 	}
-	r.NotFound(sidecar.ServeHTTP)
+	r.NotFound(notFoundHandler(o.staticH, sidecar))
 	r.MethodNotAllowed(sidecar.ServeHTTP)
 	return r, nil
+}
+
+func notFoundHandler(staticH, sidecar http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stripped := StripMulticloud(r.URL.Path)
+		if staticH != nil && r.Method == http.MethodGet && static.IsStaticPath(stripped) {
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = stripped
+			staticH.ServeHTTP(w, r2)
+			return
+		}
+		sidecar.ServeHTTP(w, r)
+	}
 }
 
 func requestLogger(next http.Handler) http.Handler {
