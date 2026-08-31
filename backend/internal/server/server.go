@@ -25,6 +25,20 @@ import (
 
 const multicloudPrefix = "/multicloud"
 
+type handlerOptions struct {
+	rbacEvents http.Handler
+}
+
+// Option configures Handler.
+type Option func(*handlerOptions)
+
+// WithRBACEvents registers GET /events/rbac (and /multicloud/events/rbac).
+func WithRBACEvents(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.rbacEvents = h
+	}
+}
+
 // StripMulticloud returns the path used for Go-owned route matching.
 func StripMulticloud(path string) string {
 	if path == multicloudPrefix {
@@ -48,6 +62,10 @@ func isProbe(path string) bool {
 	}
 }
 
+func isEventStream(path string) bool {
+	return path == "/events/rbac"
+}
+
 // TLSConfigForSidecar is for the loopback Node sidecar. Local generate-certs
 // writes a self-signed cert with no SAN, so hostname verification cannot succeed.
 func TLSConfigForSidecar(_ *config.Config) *tls.Config {
@@ -57,8 +75,12 @@ func TLSConfigForSidecar(_ *config.Config) *tls.Config {
 	}
 }
 
-// Handler builds the public mux: probes on Go, everything else to the sidecar.
-func Handler(cfg *config.Config) (http.Handler, error) {
+// Handler builds the public mux: probes and migrated routes on Go, everything else to the sidecar.
+func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
+	o := &handlerOptions{}
+	for _, opt := range opts {
+		opt(o)
+	}
 	target, err := url.Parse(cfg.NodeBackendURL)
 	if err != nil {
 		return nil, err
@@ -75,6 +97,10 @@ func Handler(cfg *config.Config) (http.Handler, error) {
 	r.Get(multicloudPrefix+"/livenessProbe", probes.Liveness)
 	r.Get(multicloudPrefix+"/readinessProbe", probes.Readiness)
 	r.Get(multicloudPrefix+"/ping", probes.Ping)
+	if o.rbacEvents != nil {
+		r.Get("/events/rbac", o.rbacEvents.ServeHTTP)
+		r.Get(multicloudPrefix+"/events/rbac", o.rbacEvents.ServeHTTP)
+	}
 	r.NotFound(sidecar.ServeHTTP)
 	r.MethodNotAllowed(sidecar.ServeHTTP)
 	return r, nil
@@ -83,7 +109,8 @@ func Handler(cfg *config.Config) (http.Handler, error) {
 func requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		stripped := StripMulticloud(r.URL.Path)
-		if isProbe(stripped) {
+		// Do not wrap SSE: the wrapper can prevent HTTP/2 from flushing events to EventSource.
+		if isProbe(stripped) || isEventStream(stripped) {
 			next.ServeHTTP(w, r)
 			return
 		}
