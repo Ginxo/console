@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 	"github.com/stolostron/console/backend/internal/clusterproxy"
 	"github.com/stolostron/console/backend/internal/config"
 	rbacevents "github.com/stolostron/console/backend/internal/events/rbac"
+	"github.com/stolostron/console/backend/internal/k8sproxy"
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/mcproxy"
 	"github.com/stolostron/console/backend/internal/metricsproxy"
@@ -66,6 +68,12 @@ func run() error {
 	}
 	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
 
+	clusterURL, err := url.Parse(cfg.ClusterAPIURL)
+	if err != nil {
+		return err
+	}
+	k8sHandler := k8sproxy.New(clusterURL, k8sproxy.TLSConfigFromCA(sa.CACert))
+
 	hubClient, err := rest.HTTPClientFor(restCfg)
 	if err != nil {
 		return err
@@ -89,6 +97,7 @@ func run() error {
 
 	handler, err := server.Handler(cfg,
 		server.WithRBACEvents(rbacHandler),
+		server.WithK8sProxy(k8sHandler),
 		server.WithManagedClusterProxy(mcproxy.New(mcproxy.Options{
 			Resolver:   addonResolver,
 			TLSConfig:  serviceTLS,

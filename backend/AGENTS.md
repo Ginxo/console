@@ -18,6 +18,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `cmd/console` | Process entry: load config, require SA token, listen, SIGINT/SIGTERM |
 | `internal/server` | TLS listener, chi mux, `/multicloud` probe aliases |
 | `internal/proxy` | Reverse proxy to `NODE_BACKEND_URL` (original path, including `/multicloud`) |
+| `internal/k8sproxy` | Hub kube-apiserver passthrough for `/api`, `/apis`, `/version` (user Bearer token) |
 | `internal/clusterproxy` | cluster-proxy-addon-user URL discovery (MCE target namespace / env overrides) |
 | `internal/mcproxy` | Managed-cluster reverse proxy (`/managedclusterproxy/*`, including WebSocket) |
 | `internal/metricsproxy` | Prometheus and observability query reverse proxies |
@@ -53,6 +54,8 @@ Go backend :4000 (TLS / HTTP/2)
         ├─ GET /livenessProbe, /readinessProbe, /ping
         │    (also /multicloud/…)
         ├─ GET /events/rbac (ClusterRole watch; also /multicloud/events/rbac)
+        ├─ ALL /api, /apis, GET /version → hub kube-apiserver (user token)
+        │    (also /multicloud/…)
         ├─ ALL /managedclusterproxy/* → cluster-proxy addon (user token; WebSocket)
         ├─ GET /prometheus/*, /observability/* → metrics backends (user token)
         ├─ /virtualmachines/*, /virtualmachineinstances/*, /virtualmachinesnapshots/*,

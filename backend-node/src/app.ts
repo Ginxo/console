@@ -21,7 +21,6 @@ import { liveness } from './routes/liveness'
 import { multiClusterHubComponents } from './routes/multiClusterHubComponents'
 import { login, loginCallback, logout } from './routes/oauth'
 import { operatorCheck } from './routes/operatorCheck'
-import { proxy } from './routes/proxy'
 import { readiness } from './routes/readiness'
 import { search } from './routes/search'
 import { placementDebug } from './routes/placementDebug'
@@ -59,13 +58,7 @@ export const router = Router<Router.HTTPVersion.V2>({ maxParamLength: 500 })
 router.get('/readinessProbe', readiness)
 router.get('/livenessProbe', liveness)
 router.get('/ping', respondOK)
-router.all('/api', proxy)
-router.all('/api/*', proxy)
-router.all('/apis', proxy)
-router.all('/apis/*', proxy)
 router.get('/apiPaths', apiPaths)
-router.get('/version', proxy)
-router.get('/version/', proxy)
 router.post('/operatorCheck', operatorCheck)
 if (!isProduction) {
   router.get('/configure', configure)

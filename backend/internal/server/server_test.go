@@ -261,26 +261,85 @@ func TestStatelessProxiesNotProxiedToSidecar(t *testing.T) {
 	}
 }
 
-func TestUnmigratedRoutesStillProxied(t *testing.T) {
-	var capturedPath string
+func TestK8sProxyNotProxiedToSidecar(t *testing.T) {
+	var sidecarPaths []string
 	sidecar := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		capturedPath = r.URL.Path
-		w.WriteHeader(http.StatusOK)
+		sidecarPaths = append(sidecarPaths, r.URL.Path)
+		w.WriteHeader(http.StatusTeapot)
 	}))
 	defer sidecar.Close()
 
-	ok := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		t.Fatal("go handler should not run")
+	var k8sPaths []string
+	k8s := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		k8sPaths = append(k8sPaths, r.URL.Path)
+		w.WriteHeader(http.StatusOK)
 	})
+
 	cfg := &config.Config{NodeBackendURL: sidecar.URL, CertsDir: t.TempDir()}
-	h, err := server.Handler(cfg, server.WithPrometheusProxy(ok), server.WithManagedClusterProxy(ok), server.WithVMProxy(ok))
+	h, err := server.Handler(cfg, server.WithK8sProxy(k8s))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ts := httptest.NewServer(h)
 	defer ts.Close()
 
-	for _, path := range []string{"/hub", "/multicloud/search", "/apiPaths"} {
+	paths := []string{
+		"/api/v1/namespaces",
+		"/apis/apps/v1/deployments",
+		"/version",
+		"/multicloud/api/v1/pods",
+		"/multicloud/apis/rbac.authorization.k8s.io/v1/clusterroles",
+		"/multicloud/version/",
+	}
+	for _, path := range paths {
+		sidecarPaths = nil
+		k8sPaths = nil
+		req, _ := http.NewRequest(http.MethodGet, ts.URL+path, nil)
+		req.Header.Set("Authorization", "Bearer token")
+		resp, getErr := ts.Client().Do(req)
+		if getErr != nil {
+			t.Fatal(getErr)
+		}
+		resp.Body.Close()
+		if len(sidecarPaths) != 0 {
+			t.Fatalf("%s was proxied to sidecar: %v", path, sidecarPaths)
+		}
+		if len(k8sPaths) != 1 || k8sPaths[0] != path {
+			t.Fatalf("%s k8s paths %v", path, k8sPaths)
+		}
+	}
+}
+
+func TestUnmigratedRoutesStillProxied(t *testing.T) {
+	var capturedPath string
+	sidecar := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`["/api/v1"]`))
+	}))
+	defer sidecar.Close()
+
+	ok := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Fatal("go handler should not run")
+	})
+	k8s := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Fatal("k8s proxy should not handle /apiPaths")
+	})
+
+	cfg := &config.Config{NodeBackendURL: sidecar.URL, CertsDir: t.TempDir()}
+	h, err := server.Handler(cfg,
+		server.WithK8sProxy(k8s),
+		server.WithPrometheusProxy(ok),
+		server.WithManagedClusterProxy(ok),
+		server.WithVMProxy(ok),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(h)
+	defer ts.Close()
+
+	for _, path := range []string{"/hub", "/multicloud/search", "/apiPaths", "/multicloud/apiPaths"} {
 		resp, getErr := ts.Client().Get(ts.URL + path)
 		if getErr != nil {
 			t.Fatal(getErr)
