@@ -28,6 +28,7 @@ const multicloudPrefix = "/multicloud"
 
 type handlerOptions struct {
 	rbacEvents http.Handler
+	k8sProxy   http.Handler
 	staticH    http.Handler
 }
 
@@ -38,6 +39,13 @@ type Option func(*handlerOptions)
 func WithRBACEvents(h http.Handler) Option {
 	return func(o *handlerOptions) {
 		o.rbacEvents = h
+	}
+}
+
+// WithK8sProxy registers /api, /apis, and /version passthrough to the hub kube-apiserver.
+func WithK8sProxy(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.k8sProxy = h
 	}
 }
 
@@ -75,6 +83,23 @@ func isEventStream(path string) bool {
 	return path == "/events/rbac"
 }
 
+func registerK8sProxyRoutes(r chi.Router, h http.Handler) {
+	for _, pattern := range []string{
+		"/api", "/api/*",
+		"/apis", "/apis/*",
+		multicloudPrefix + "/api", multicloudPrefix + "/api/*",
+		multicloudPrefix + "/apis", multicloudPrefix + "/apis/*",
+	} {
+		r.Handle(pattern, h)
+	}
+	for _, pattern := range []string{
+		"/version", "/version/",
+		multicloudPrefix + "/version", multicloudPrefix + "/version/",
+	} {
+		r.Get(pattern, h.ServeHTTP)
+	}
+}
+
 // TLSConfigForSidecar is for the loopback Node sidecar. Local generate-certs
 // writes a self-signed cert with no SAN, so hostname verification cannot succeed.
 func TLSConfigForSidecar(_ *config.Config) *tls.Config {
@@ -109,6 +134,9 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 	if o.rbacEvents != nil {
 		r.Get("/events/rbac", o.rbacEvents.ServeHTTP)
 		r.Get(multicloudPrefix+"/events/rbac", o.rbacEvents.ServeHTTP)
+	}
+	if o.k8sProxy != nil {
+		registerK8sProxyRoutes(r, o.k8sProxy)
 	}
 	r.NotFound(notFoundHandler(o.staticH, sidecar))
 	r.MethodNotAllowed(sidecar.ServeHTTP)
