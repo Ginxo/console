@@ -20,6 +20,7 @@ import (
 	"github.com/stolostron/console/backend/internal/config"
 	"github.com/stolostron/console/backend/internal/health"
 	applog "github.com/stolostron/console/backend/internal/log"
+	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/proxy"
 )
 
@@ -27,6 +28,8 @@ const multicloudPrefix = "/multicloud"
 
 type handlerOptions struct {
 	rbacEvents http.Handler
+	oauth      *oauth.Handler
+	oauthLogin bool
 }
 
 // Option configures Handler.
@@ -36,6 +39,20 @@ type Option func(*handlerOptions)
 func WithRBACEvents(h http.Handler) Option {
 	return func(o *handlerOptions) {
 		o.rbacEvents = h
+	}
+}
+
+// WithOAuth registers GET /configure (OAuth discovery for logout and Display Token).
+func WithOAuth(h *oauth.Handler) Option {
+	return func(o *handlerOptions) {
+		o.oauth = h
+	}
+}
+
+// WithOAuthLogin registers standalone /login, /login/callback, and /logout (non-production).
+func WithOAuthLogin() Option {
+	return func(o *handlerOptions) {
+		o.oauthLogin = true
 	}
 }
 
@@ -101,9 +118,24 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 		r.Get("/events/rbac", o.rbacEvents.ServeHTTP)
 		r.Get(multicloudPrefix+"/events/rbac", o.rbacEvents.ServeHTTP)
 	}
+	if o.oauth != nil {
+		registerOAuth(r, "", o.oauth, o.oauthLogin)
+		registerOAuth(r, multicloudPrefix, o.oauth, o.oauthLogin)
+	}
 	r.NotFound(sidecar.ServeHTTP)
 	r.MethodNotAllowed(sidecar.ServeHTTP)
 	return r, nil
+}
+
+func registerOAuth(r chi.Router, prefix string, h *oauth.Handler, login bool) {
+	r.Get(prefix+"/configure", h.Configure)
+	if !login {
+		return
+	}
+	r.Get(prefix+"/login", h.Login)
+	r.Get(prefix+"/login/callback", h.Callback)
+	r.Get(prefix+"/logout", h.Logout)
+	r.Get(prefix+"/logout/", h.Logout)
 }
 
 func requestLogger(next http.Handler) http.Handler {

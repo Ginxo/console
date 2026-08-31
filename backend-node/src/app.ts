@@ -14,13 +14,11 @@ import { ServerSideEvents } from './lib/server-side-events'
 import { aggregate, startAggregating, stopAggregating } from './routes/aggregator'
 import { ansibleTower } from './routes/ansibletower'
 import { apiPaths } from './routes/apiPaths'
-import { configure } from './routes/configure'
 import { events, startWatching, stopWatching } from './routes/events'
 import { hub } from './routes/hub'
 import { liveness } from './routes/liveness'
 import { observabilityProxy, prometheusProxy } from './routes/metricsProxy'
 import { multiClusterHubComponents } from './routes/multiClusterHubComponents'
-import { login, loginCallback, logout } from './routes/oauth'
 import { operatorCheck } from './routes/operatorCheck'
 import { proxy } from './routes/proxy'
 import { readiness } from './routes/readiness'
@@ -72,13 +70,6 @@ router.get('/version/', proxy)
 router.post('/operatorCheck', operatorCheck)
 router.get('/observability/*', observabilityProxy)
 router.get('/prometheus/*', prometheusProxy)
-if (!isProduction) {
-  router.get('/configure', configure)
-  router.get('/login', login)
-  router.get('/login/callback', loginCallback)
-  router.get('/logout', logout)
-  router.get('/logout/', logout)
-}
 if (eventsEnabled) {
   router.get('/events', events)
 }

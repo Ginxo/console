@@ -14,6 +14,7 @@ import (
 	"github.com/stolostron/console/backend/internal/config"
 	rbacevents "github.com/stolostron/console/backend/internal/events/rbac"
 	applog "github.com/stolostron/console/backend/internal/log"
+	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/server"
 	"k8s.io/client-go/kubernetes"
 )
@@ -60,7 +61,23 @@ func run() error {
 	}
 	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
 
-	handler, err := server.Handler(cfg, server.WithRBACEvents(rbacHandler))
+	oauthH := oauth.New(oauth.Options{
+		ClientID:      cfg.OAuth2ClientID,
+		ClientSecret:  cfg.OAuth2ClientSecret,
+		RedirectURL:   cfg.OAuth2RedirectURL,
+		FrontendURL:   cfg.FrontendURL,
+		ClusterAPIURL: cfg.ClusterAPIURL,
+		OIDCIssuerURL: cfg.OIDCIssuerURL,
+		Production:    cfg.Production,
+		Client:        auth.HTTPClient(sa.CACert, 0),
+	})
+	var opts []server.Option
+	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH))
+	if !cfg.Production {
+		opts = append(opts, server.WithOAuthLogin())
+	}
+
+	handler, err := server.Handler(cfg, opts...)
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,8 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `internal/proxy` | Reverse proxy to `NODE_BACKEND_URL` (original path, including `/multicloud`) |
 | `internal/health` | `/ping`, `/livenessProbe` (Go only), `/readinessProbe` (Go + sidecar `/ping`) |
 | `internal/config` | `.env` + `config/` directory (filename = key) |
-| `internal/auth` | Cookie/Bearer, SA token/CA, TokenReview helper |
+| `internal/auth` | Cookie/Bearer, SA token/CA, TokenReview helper, OCM SSO client-credentials token |
+| `internal/oauth` | `/configure` discovery; standalone `/login` `/login/callback` `/logout` (OpenShift OAuth and OIDC) |
 | `internal/events/rbac` | `GET /events/rbac` SSE: ClusterRole informer (`vm-clusterroles` label) + per-user SSAR |
 | `internal/log` | slog JSON helper |
 | `config/` | Runtime settings shared with the Node sidecar |
@@ -49,6 +50,8 @@ Go backend :4000 (TLS / HTTP/2)
         ├─ GET /livenessProbe, /readinessProbe, /ping
         │    (also /multicloud/…)
         ├─ GET /events/rbac (ClusterRole watch; also /multicloud/events/rbac)
+        ├─ GET /configure (OAuth/OIDC token_endpoint discovery)
+        ├─ GET /login, /login/callback, /logout (standalone OAuth/OIDC; non-production)
         └─ everything else (original URL) ──HTTP/1.1──► Node sidecar :4001
                                                               │
                                                               ▼

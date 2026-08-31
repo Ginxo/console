@@ -38,3 +38,5 @@ All resources are checked for access using `SubjectAccessReview` calls to the cl
 
 The console backend proxies the cluster apiserver `/api` and `/apis` apiserver REST routes.
 All REST calls use the token passed from the console frontend.
+
+Standalone login (`GET /login`, `/login/callback`, `/logout`) is served by the Go listener in non-production. `GET /configure` returns `{ token_endpoint }` from OAuth/OIDC discovery for frontend logout and the Display Token page. The cookie `acm-access-token-cookie` (HttpOnly, Path=/, Secure in production) holds the OpenShift access token or OIDC id_token. Production plugin mode continues to use OpenShift Console authentication.
