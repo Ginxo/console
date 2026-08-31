@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 	"github.com/stolostron/console/backend/internal/auth"
 	"github.com/stolostron/console/backend/internal/config"
 	rbacevents "github.com/stolostron/console/backend/internal/events/rbac"
+	"github.com/stolostron/console/backend/internal/k8sproxy"
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/server"
@@ -71,8 +73,14 @@ func run() error {
 		Production:    cfg.Production,
 		Client:        auth.HTTPClient(sa.CACert, 0),
 	})
+	clusterURL, err := url.Parse(cfg.ClusterAPIURL)
+	if err != nil {
+		return err
+	}
+	k8sHandler := k8sproxy.New(clusterURL, k8sproxy.TLSConfigFromCA(sa.CACert))
+
 	var opts []server.Option
-	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH))
+	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH), server.WithK8sProxy(k8sHandler))
 	if !cfg.Production {
 		opts = append(opts, server.WithOAuthLogin())
 	}
