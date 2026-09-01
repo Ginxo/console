@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"github.com/stolostron/console/backend/internal/auth"
 	"github.com/stolostron/console/backend/internal/clusterproxy"
@@ -74,17 +73,11 @@ func run() error {
 	}
 	k8sHandler := k8sproxy.New(clusterURL, k8sproxy.TLSConfigFromCA(sa.CACert))
 
-	hubClient, err := rest.HTTPClientFor(restCfg)
-	if err != nil {
-		return err
-	}
 	serviceTLS := auth.ServiceTLSConfig(sa)
 	addonResolver := &clusterproxy.Resolver{
 		HostOverride:  cfg.ClusterProxyAddonUserHost,
 		RouteOverride: cfg.ClusterProxyAddonUserRoute,
 		Hub:           restCfg,
-		SAToken:       sa.Token,
-		Client:        hubClient,
 	}
 	promURL, err := metricsproxy.ParseTarget(cfg.PrometheusRoute, metricsproxy.DefaultPrometheusURL)
 	if err != nil {

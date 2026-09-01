@@ -4,72 +4,44 @@ package vmproxy
 
 import (
 	"context"
-	"crypto/tls"
-	"encoding/json"
-	"io"
-	"net/http"
-	"strings"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/stolostron/console/backend/internal/auth"
+	"github.com/stolostron/console/backend/internal/hubresources"
 	applog "github.com/stolostron/console/backend/internal/log"
 )
-
-type mchList struct {
-	Items []struct {
-		Spec *struct {
-			Overrides *struct {
-				Components []struct {
-					Name    string `json:"name"`
-					Enabled bool   `json:"enabled"`
-				} `json:"components"`
-			} `json:"overrides"`
-		} `json:"spec"`
-	} `json:"items"`
-}
 
 func (h *Handler) fineGrainedRBAC(ctx context.Context) bool {
 	if h.opts.FineGrained != nil {
 		ok, err := h.opts.FineGrained(ctx)
 		return err == nil && ok
 	}
-	if h.hubClient == nil || h.opts.RESTConfig == nil {
+	dc, err := h.hubDynamic()
+	if err != nil {
+		applog.Logger().Error("mch dynamic client", "error", err)
 		return false
 	}
-	host := strings.TrimRight(h.opts.RESTConfig.Host, "/")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, host+"/apis/operator.open-cluster-management.io/v1/multiclusterhubs", nil)
+	ok, err := hubresources.MCHFineGrainedRBAC(ctx, dc)
 	if err != nil {
 		applog.Logger().Error("Error getting MultiClusterHub", "error", err)
 		return false
 	}
-	req.Header.Set("Authorization", "Bearer "+h.opts.SAToken)
-	req.Header.Set("Accept", "application/json")
-	resp, err := h.hubClient.Do(req)
-	if err != nil {
-		applog.Logger().Error("Error getting MultiClusterHub", "error", err)
-		return false
+	return ok
+}
+
+func (h *Handler) hubDynamic() (dynamic.Interface, error) {
+	if h.opts.HubDynamic != nil {
+		return h.opts.HubDynamic, nil
 	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return false
+	if h.opts.RESTConfig == nil {
+		return nil, rest.ErrNotInCluster
 	}
-	var list mchList
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		return false
-	}
-	if len(list.Items) == 0 || list.Items[0].Spec == nil || list.Items[0].Spec.Overrides == nil {
-		return false
-	}
-	for _, c := range list.Items[0].Spec.Overrides.Components {
-		if c.Name == "fine-grained-rbac" {
-			return c.Enabled
-		}
-	}
-	return false
+	return dynamic.NewForConfig(h.opts.RESTConfig)
 }
 
 func (h *Handler) canCreateMCA(ctx context.Context, userToken, namespace string) bool {
@@ -117,15 +89,4 @@ func (h *Handler) userKube(token string) (kubernetes.Interface, error) {
 		return h.opts.UserKube(token)
 	}
 	return kubernetes.NewForConfig(auth.UserRESTConfig(h.opts.RESTConfig, token))
-}
-
-func hubHTTPClient(cfg *rest.Config, tlsCfg *tls.Config) *http.Client {
-	if cfg == nil {
-		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsCfg}}
-	}
-	c, err := rest.HTTPClientFor(cfg)
-	if err != nil {
-		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsCfg}}
-	}
-	return c
 }

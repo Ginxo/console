@@ -4,15 +4,29 @@ package clusterproxy_test
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/fake"
 
 	"github.com/stolostron/console/backend/internal/clusterproxy"
 )
+
+func mceObject(targetNamespace string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "multicluster.openshift.io",
+		Version: "v1",
+		Kind:    "MultiClusterEngine",
+	})
+	obj.SetName("engine")
+	if err := unstructured.SetNestedField(obj.Object, targetNamespace, "spec", "targetNamespace"); err != nil {
+		panic(err)
+	}
+	return obj
+}
 
 func TestServiceHost(t *testing.T) {
 	if got := clusterproxy.ServiceHost(""); got != "cluster-proxy-addon-user.multicluster-engine.svc.cluster.local" {
@@ -43,26 +57,11 @@ func TestURLRouteOverride(t *testing.T) {
 }
 
 func TestNamespaceFromMCE(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/apis/multicluster.openshift.io/v1/multiclusterengines" {
-			t.Fatalf("path %s", r.URL.Path)
-		}
-		if r.Header.Get("Authorization") != "Bearer sa" {
-			t.Fatalf("auth %s", r.Header.Get("Authorization"))
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"items": []map[string]any{
-				{"spec": map[string]any{"targetNamespace": "custom-mce"}},
-			},
-		})
-	}))
-	t.Cleanup(ts.Close)
+	dc := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		{Group: "multicluster.openshift.io", Version: "v1", Resource: "multiclusterengines"}: "MultiClusterEngineList",
+	}, mceObject("custom-mce"))
 
-	r := &clusterproxy.Resolver{
-		Hub:     &rest.Config{Host: ts.URL},
-		SAToken: "sa",
-		Client:  ts.Client(),
-	}
+	r := &clusterproxy.Resolver{Dynamic: dc}
 	host, port := r.HostPort(context.Background())
 	if host != "cluster-proxy-addon-user.custom-mce.svc.cluster.local" || port != "9092" {
 		t.Fatalf("got %s:%s", host, port)

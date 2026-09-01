@@ -4,16 +4,16 @@ package clusterproxy
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
+	"github.com/stolostron/console/backend/internal/hubresources"
 	applog "github.com/stolostron/console/backend/internal/log"
 )
 
@@ -29,10 +29,12 @@ type Resolver struct {
 	HostOverride  string
 	RouteOverride string
 	// Target, when set, is the full addon URL (tests).
-	Target  *url.URL
-	Hub     *rest.Config
-	SAToken string
-	Client  *http.Client
+	Target *url.URL
+	Hub    *rest.Config
+	// Dynamic, when set, is used instead of building a client from Hub (tests).
+	Dynamic dynamic.Interface
+	// Client is used with Hub for dynamic.NewForConfigAndClient (tests).
+	Client *http.Client
 
 	mu        sync.Mutex
 	cachedNS  string
@@ -100,45 +102,34 @@ func (r *Resolver) namespace(ctx context.Context) string {
 	return ns
 }
 
-type mceList struct {
-	Items []struct {
-		Spec struct {
-			TargetNamespace string `json:"targetNamespace"`
-		} `json:"spec"`
-	} `json:"items"`
+func (r *Resolver) fetchNamespace(ctx context.Context) string {
+	dc, err := r.dynamicClient()
+	if err != nil {
+		applog.Logger().Error("mce dynamic client", "error", err)
+		return DefaultNamespace
+	}
+	ns, err := hubresources.MCETargetNamespace(ctx, dc)
+	if err != nil {
+		applog.Logger().Error("Error getting MultiClusterEngine", "error", err)
+		return DefaultNamespace
+	}
+	if ns == "" {
+		return DefaultNamespace
+	}
+	return ns
 }
 
-func (r *Resolver) fetchNamespace(ctx context.Context) string {
-	if r.Hub == nil || r.Client == nil || r.SAToken == "" {
-		return DefaultNamespace
+func (r *Resolver) dynamicClient() (dynamic.Interface, error) {
+	if r != nil && r.Dynamic != nil {
+		return r.Dynamic, nil
 	}
-	host := strings.TrimRight(r.Hub.Host, "/")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, host+"/apis/multicluster.openshift.io/v1/multiclusterengines", nil)
-	if err != nil {
-		applog.Logger().Error("mce request", "error", err)
-		return DefaultNamespace
+	if r == nil || r.Hub == nil {
+		return nil, fmt.Errorf("hub rest config is required")
 	}
-	req.Header.Set("Authorization", "Bearer "+r.SAToken)
-	req.Header.Set("Accept", "application/json")
-	resp, err := r.Client.Do(req)
-	if err != nil {
-		applog.Logger().Error("Error getting MultiClusterEngine", "error", err)
-		return DefaultNamespace
+	if r.Client != nil {
+		return dynamic.NewForConfigAndClient(r.Hub, r.Client)
 	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		applog.Logger().Error("Error getting MultiClusterEngine", "status", resp.StatusCode)
-		return DefaultNamespace
-	}
-	var list mceList
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-		applog.Logger().Error("Error getting MultiClusterEngine", "error", err)
-		return DefaultNamespace
-	}
-	if len(list.Items) == 0 || list.Items[0].Spec.TargetNamespace == "" {
-		return DefaultNamespace
-	}
-	return list.Items[0].Spec.TargetNamespace
+	return dynamic.NewForConfig(r.Hub)
 }
 
 // TargetURL builds https://host:port for ReverseProxy SetURL.

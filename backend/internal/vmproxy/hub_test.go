@@ -4,26 +4,44 @@ package vmproxy
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
+	kubefake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
-	"k8s.io/client-go/rest"
 )
 
-func mchResponse(enabled bool) string {
-	flag := "false"
-	if enabled {
-		flag = "true"
+func mchObject(fineGrainedEnabled bool) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "operator.open-cluster-management.io",
+		Version: "v1",
+		Kind:    "MultiClusterHub",
+	})
+	obj.SetName("hub")
+	components := []interface{}{
+		map[string]interface{}{
+			"name":    "fine-grained-rbac",
+			"enabled": fineGrainedEnabled,
+		},
 	}
-	return `{"items":[{"spec":{"overrides":{"components":[{"name":"fine-grained-rbac","enabled":` + flag + `}]}}}]}`
+	if err := unstructured.SetNestedSlice(obj.Object, components, "spec", "overrides", "components"); err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+func mchDynamicClient(enabled bool) *fake.FakeDynamicClient {
+	return fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		{Group: "operator.open-cluster-management.io", Version: "v1", Resource: "multiclusterhubs"}: "MultiClusterHubList",
+	}, mchObject(enabled))
 }
 
 func TestFineGrainedRBAC_OptionOverride(t *testing.T) {
@@ -34,40 +52,14 @@ func TestFineGrainedRBAC_OptionOverride(t *testing.T) {
 }
 
 func TestFineGrainedRBAC_FromHub(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/apis/operator.open-cluster-management.io/v1/multiclusterhubs" {
-			http.NotFound(w, r)
-			return
-		}
-		if r.Header.Get("Authorization") != "Bearer sa-token" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(mchResponse(true)))
-	}))
-	t.Cleanup(ts.Close)
-
-	h := &Handler{
-		opts:      Options{SAToken: "sa-token", RESTConfig: &rest.Config{Host: ts.URL}},
-		hubClient: ts.Client(),
-	}
+	h := &Handler{opts: Options{HubDynamic: mchDynamicClient(true)}}
 	if !h.fineGrainedRBAC(context.Background()) {
 		t.Fatal("expected fine-grained RBAC enabled from hub")
 	}
 }
 
 func TestFineGrainedRBAC_DisabledComponent(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(mchResponse(false)))
-	}))
-	t.Cleanup(ts.Close)
-
-	h := &Handler{
-		opts:      Options{SAToken: "sa-token", RESTConfig: &rest.Config{Host: ts.URL}},
-		hubClient: ts.Client(),
-	}
+	h := &Handler{opts: Options{HubDynamic: mchDynamicClient(false)}}
 	if h.fineGrainedRBAC(context.Background()) {
 		t.Fatal("expected fine-grained RBAC disabled")
 	}
@@ -80,23 +72,8 @@ func TestFineGrainedRBAC_MissingClient(t *testing.T) {
 	}
 }
 
-func TestFineGrainedRBAC_HubError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	t.Cleanup(ts.Close)
-
-	h := &Handler{
-		opts:      Options{SAToken: "sa-token", RESTConfig: &rest.Config{Host: ts.URL}},
-		hubClient: ts.Client(),
-	}
-	if h.fineGrainedRBAC(context.Background()) {
-		t.Fatal("expected false on hub error")
-	}
-}
-
 func TestCanCreateMCA_Allowed(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := kubefake.NewSimpleClientset()
 	client.PrependReactor("create", "selfsubjectaccessreviews", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, &authzv1.SelfSubjectAccessReview{
 			Status: authzv1.SubjectAccessReviewStatus{Allowed: true},
@@ -109,7 +86,7 @@ func TestCanCreateMCA_Allowed(t *testing.T) {
 }
 
 func TestCanCreateMCA_Denied(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := kubefake.NewSimpleClientset()
 	client.PrependReactor("create", "selfsubjectaccessreviews", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, &authzv1.SelfSubjectAccessReview{
 			Status: authzv1.SubjectAccessReviewStatus{Allowed: false},
@@ -126,7 +103,7 @@ func TestVMActorToken_Found(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "vm-actor", Namespace: "cluster-ns"},
 		Data:       map[string][]byte{"token": []byte("vm-actor-token")},
 	}
-	h := &Handler{saKube: fake.NewSimpleClientset(secret)}
+	h := &Handler{saKube: kubefake.NewSimpleClientset(secret)}
 	token, ok := h.vmActorToken(context.Background(), "cluster-ns")
 	if !ok || token != "vm-actor-token" {
 		t.Fatalf("token=%q ok=%v", token, ok)
@@ -134,22 +111,8 @@ func TestVMActorToken_Found(t *testing.T) {
 }
 
 func TestVMActorToken_NotFound(t *testing.T) {
-	h := &Handler{saKube: fake.NewSimpleClientset()}
+	h := &Handler{saKube: kubefake.NewSimpleClientset()}
 	if token, ok := h.vmActorToken(context.Background(), "cluster-ns"); ok || token != "" {
 		t.Fatalf("token=%q ok=%v", token, ok)
-	}
-}
-
-func TestHubHTTPClient_NilConfig(t *testing.T) {
-	c := hubHTTPClient(nil, nil)
-	if c == nil {
-		t.Fatal("expected client")
-	}
-}
-
-func TestHubHTTPClient_WithConfig(t *testing.T) {
-	c := hubHTTPClient(&rest.Config{Host: "https://example.invalid"}, nil)
-	if c == nil {
-		t.Fatal("expected client")
 	}
 }

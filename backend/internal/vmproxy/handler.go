@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -27,6 +28,7 @@ type Options struct {
 	RESTConfig  *rest.Config
 	SAToken     string
 	Kube        kubernetes.Interface
+	HubDynamic  dynamic.Interface
 	UserKube    func(token string) (kubernetes.Interface, error)
 	Validate    func(ctx context.Context, token string) error
 	FineGrained func(ctx context.Context) (bool, error)
@@ -36,7 +38,6 @@ type Options struct {
 type Handler struct {
 	opts        Options
 	saKube      kubernetes.Interface
-	hubClient   *http.Client
 	addonClient *http.Client
 }
 
@@ -48,7 +49,6 @@ func New(opts Options) *Handler {
 			h.saKube = kube
 		}
 	}
-	h.hubClient = hubHTTPClient(opts.RESTConfig, opts.TLSConfig)
 	h.addonClient = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig:   opts.TLSConfig,
