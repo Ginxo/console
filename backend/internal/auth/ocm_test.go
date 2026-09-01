@@ -69,7 +69,7 @@ func TestOCMServiceToken_Error(t *testing.T) {
 }
 
 func TestTLSConfigFromCA_AppendsPEM(t *testing.T) {
-	cfg := auth.TLSConfigFromCA([]byte("not-pem"))
+	cfg := auth.TLSConfigFromCA([]byte("not-pem"), true)
 	if cfg.MinVersion != tls.VersionTLS12 {
 		t.Fatalf("min version %d", cfg.MinVersion)
 	}
