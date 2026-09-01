@@ -13,6 +13,12 @@ import (
 	"time"
 )
 
+func TestMain(m *testing.M) {
+	code := m.Run()
+	printContractSummary(os.Stdout)
+	os.Exit(code)
+}
+
 func catalogDir(t *testing.T) string {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
@@ -41,6 +47,8 @@ func TestCatalogAgainstBackend(t *testing.T) {
 	watched := WatchedKindSet(resources)
 	t.Logf("backend=%s cases=%d mode=%s", cfg.BackendURL, len(cases), cfg.Mode)
 
+	catalogSummary.reset()
+
 	for _, cs := range cases {
 		cs := cs
 		paths := []string{cs.Path}
@@ -54,51 +62,54 @@ func TestCatalogAgainstBackend(t *testing.T) {
 				name += "/multicloud"
 			}
 			t.Run(name, func(t *testing.T) {
-				runCase(t, cfg, cs, p, watched)
+				runCase(t, cfg, cs, p, watched, name)
 			})
 		}
 	}
 }
 
-func runCase(t *testing.T, cfg Config, cs Case, path string, watched map[string]struct{}) {
+func runCase(t *testing.T, cfg Config, cs Case, path string, watched map[string]struct{}, reportName string) {
 	t.Helper()
+
 	switch strings.ToLower(cs.Kind) {
 	case "sse":
 		cap, _, err := cfg.CaptureSSE(cfg.BackendURL, cs, path, timeoutFor(cfg, cs))
 		if err != nil {
-			failOrSkip(t, wrapSoft(cs, err))
+			failOrSkip(t, reportName, wrapSoft(cs, err))
 			return
 		}
 		if err := AssertCapture(cs, cap, watched); err != nil {
-			failOrSkip(t, err)
+			failOrSkip(t, reportName, wrapSoft(cs, err))
 			return
 		}
-		recordAndCompare(t, cfg, cs, path, cap)
+		recordAndCompare(t, cfg, cs, path, cap, reportName)
 	case "websocket":
 		if err := cfg.RunWebSocket(cfg.BackendURL, cs, path); err != nil {
-			failOrSkip(t, err)
+			failOrSkip(t, reportName, wrapSoft(cs, err))
 			return
 		}
 		if cfg.CompareURL != "" {
 			if err := cfg.RunWebSocket(cfg.CompareURL, cs, path); err != nil {
-				failOrSkip(t, err)
+				failOrSkip(t, reportName, wrapSoft(cs, err))
+				return
 			}
 		}
 	default:
 		cap, err := cfg.Do(cfg.NewHTTPClient(timeoutFor(cfg, cs)), cfg.BackendURL, cs, path)
 		if err != nil {
-			failOrSkip(t, wrapSoft(cs, err))
+			failOrSkip(t, reportName, wrapSoft(cs, err))
 			return
 		}
 		if err := AssertCapture(cs, cap, watched); err != nil {
-			failOrSkip(t, err)
+			failOrSkip(t, reportName, wrapSoft(cs, err))
 			return
 		}
-		recordAndCompare(t, cfg, cs, path, cap)
+		recordAndCompare(t, cfg, cs, path, cap, reportName)
 	}
+	catalogSummary.record(reportName, resultPass)
 }
 
-func recordAndCompare(t *testing.T, cfg Config, cs Case, path string, cap Capture) {
+func recordAndCompare(t *testing.T, cfg Config, cs Case, path string, cap Capture, reportName string) {
 	t.Helper()
 	if cfg.Mode == ModeRecord || os.Getenv("CONTRACT_RECORD") == "1" {
 		rec := Recorded{
@@ -109,7 +120,7 @@ func recordAndCompare(t *testing.T, cfg Config, cs Case, path string, cap Captur
 			Body:    NormalizeBody(cap.Decoded),
 		}
 		if err := WriteRecord(cfg.RecordDir, rec); err != nil {
-			t.Fatalf("record: %v", err)
+			failHard(t, reportName, fmt.Errorf("record: %w", err))
 		}
 	}
 	if cfg.CompareURL == "" || strings.EqualFold(cs.Kind, "sse") || strings.EqualFold(cs.Kind, "websocket") {
@@ -117,19 +128,33 @@ func recordAndCompare(t *testing.T, cfg Config, cs Case, path string, cap Captur
 	}
 	other, err := cfg.Do(cfg.NewHTTPClient(timeoutFor(cfg, cs)), cfg.CompareURL, cs, path)
 	if err != nil {
-		t.Fatalf("compare request: %v", err)
+		failHard(t, reportName, fmt.Errorf("compare request: %w", err))
+		return
 	}
 	if err := DiffCaptures(cap, other); err != nil {
-		t.Fatalf("compare %s: %v", cfg.CompareURL, err)
+		failHard(t, reportName, fmt.Errorf("compare %s: %w", cfg.CompareURL, err))
 	}
 }
 
-func failOrSkip(t *testing.T, err error) {
+func failOrSkip(t *testing.T, name string, err error) {
 	t.Helper()
+	if err == nil {
+		return
+	}
+	catalogSummary.setDetail(name, err.Error())
 	if IsSoftSkip(err) {
+		catalogSummary.record(name, resultSoft)
 		t.Skip(err.Error())
 		return
 	}
+	catalogSummary.record(name, resultFail)
+	t.Fatal(err)
+}
+
+func failHard(t *testing.T, name string, err error) {
+	t.Helper()
+	catalogSummary.setDetail(name, err.Error())
+	catalogSummary.record(name, resultFail)
 	t.Fatal(err)
 }
 
