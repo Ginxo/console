@@ -78,6 +78,7 @@ func run() error {
 		OIDCIssuerURL: cfg.OIDCIssuerURL,
 		Production:    cfg.Production,
 		Client:        auth.HTTPClient(sa.CACert, 0),
+		RESTConfig:    restCfg,
 	})
 	var opts []server.Option
 	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH))

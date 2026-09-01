@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	"golang.org/x/oauth2"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 
 	"github.com/stolostron/console/backend/internal/auth"
 	applog "github.com/stolostron/console/backend/internal/log"
@@ -39,6 +41,9 @@ type Options struct {
 	OIDCIssuerURL string
 	Production    bool
 	Client        *http.Client
+	RESTConfig    *rest.Config
+	// UserDynamic is used with RESTConfig for per-user hub API calls (tests).
+	UserDynamic   func(bearer string) (dynamic.Interface, error)
 	Discover      func(ctx context.Context) (Info, error)
 	Revoke        func(ctx context.Context, bearer, tokenName string) error
 }
@@ -53,6 +58,8 @@ type Handler struct {
 	oidcIssuerURL string
 	production    bool
 	client        *http.Client
+	restConfig    *rest.Config
+	userDynamic   func(bearer string) (dynamic.Interface, error)
 	discover      func(ctx context.Context) (Info, error)
 	revoke        func(ctx context.Context, bearer, tokenName string) error
 
@@ -76,6 +83,8 @@ func New(opts Options) *Handler {
 		oidcIssuerURL: strings.TrimRight(opts.OIDCIssuerURL, "/"),
 		production:    opts.Production,
 		client:        withAcceptJSON(c),
+		restConfig:    opts.RESTConfig,
+		userDynamic:   opts.UserDynamic,
 		discover:      opts.Discover,
 		revoke:        opts.Revoke,
 	}
@@ -332,23 +341,20 @@ func deleteCookie(w http.ResponseWriter, name, domain string) {
 	w.Header().Add("Set-Cookie", s)
 }
 
+func (h *Handler) userDynamicClient(bearer string) (dynamic.Interface, error) {
+	if h.userDynamic != nil {
+		return h.userDynamic(bearer)
+	}
+	if h.restConfig == nil {
+		return nil, fmt.Errorf("kubernetes rest config is required")
+	}
+	return dynamic.NewForConfig(auth.UserRESTConfig(h.restConfig, bearer))
+}
+
 func (h *Handler) revokeDefault(ctx context.Context, bearer, tokenName string) error {
-	if h.clusterAPIURL == "" {
-		return fmt.Errorf("CLUSTER_API_URL is not set")
-	}
-	raw := h.clusterAPIURL + "/apis/oauth.openshift.io/v1/oauthaccesstokens/" + tokenName + "?gracePeriodSeconds=0"
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, raw, nil)
+	dc, err := h.userDynamicClient(bearer)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+bearer)
-	resp, err := h.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode >= 300 && resp.StatusCode != http.StatusNotFound {
-		return fmt.Errorf("revoke status %d", resp.StatusCode)
-	}
-	return nil
+	return RevokeOAuthAccessToken(ctx, dc, tokenName)
 }

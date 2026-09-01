@@ -15,6 +15,10 @@ import (
 	"strings"
 	"testing"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
+
 	"github.com/stolostron/console/backend/internal/auth"
 	"github.com/stolostron/console/backend/internal/oauth"
 )
@@ -265,22 +269,10 @@ func TestLogout_RevokesAndClearsCookies(t *testing.T) {
 	raw := "abcdefghijklmnopqrstuvwxyz012345"
 	bearer := "sha256~" + raw
 	wantName := oauth.AccessTokenName(bearer)
-	var gotPath, gotAuth string
-	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		gotAuth = r.Header.Get("Authorization")
-		if r.URL.Query().Get("gracePeriodSeconds") != "0" {
-			t.Errorf("grace %q", r.URL.RawQuery)
-		}
-		if r.Method != http.MethodDelete {
-			t.Errorf("method %s", r.Method)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer api.Close()
+	client := oauthAccessTokenClient(oauthAccessTokenObject(wantName))
 
 	h := oauth.New(oauth.Options{
-		ClusterAPIURL: api.URL,
+		UserDynamic: func(string) (dynamic.Interface, error) { return client, nil },
 		Discover: func(context.Context) (oauth.Info, error) {
 			return oauth.Info{AuthorizationEndpoint: "https://x/a", TokenEndpoint: "https://x/t"}, nil
 		},
@@ -293,11 +285,9 @@ func TestLogout_RevokesAndClearsCookies(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
-	if gotAuth != "Bearer "+bearer {
-		t.Fatalf("auth %q", gotAuth)
-	}
-	if !strings.HasSuffix(gotPath, "/oauthaccesstokens/"+wantName) {
-		t.Fatalf("path %q want name %q", gotPath, wantName)
+	_, err := client.Resource(oauthAccessTokenGVR).Get(context.Background(), wantName, metav1.GetOptions{})
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("expected token deleted, got %v", err)
 	}
 	cookies := rec.Header().Values("Set-Cookie")
 	joined := strings.Join(cookies, "\n")
