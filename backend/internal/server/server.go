@@ -22,6 +22,7 @@ import (
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/proxy"
+	"github.com/stolostron/console/backend/internal/static"
 )
 
 const multicloudPrefix = "/multicloud"
@@ -31,6 +32,7 @@ type handlerOptions struct {
 	k8sProxy   http.Handler
 	oauth      *oauth.Handler
 	oauthLogin bool
+	staticH    http.Handler
 }
 
 // Option configures Handler.
@@ -61,6 +63,13 @@ func WithOAuth(h *oauth.Handler) Option {
 func WithOAuthLogin() Option {
 	return func(o *handlerOptions) {
 		o.oauthLogin = true
+	}
+}
+
+// WithStatic serves plugin and SPA files for GET requests with known static extensions.
+func WithStatic(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.staticH = h
 	}
 }
 
@@ -150,7 +159,7 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 		registerOAuth(r, "", o.oauth, o.oauthLogin)
 		registerOAuth(r, multicloudPrefix, o.oauth, o.oauthLogin)
 	}
-	r.NotFound(sidecar.ServeHTTP)
+	r.NotFound(notFoundHandler(o.staticH, sidecar))
 	r.MethodNotAllowed(sidecar.ServeHTTP)
 	return r, nil
 }
@@ -164,6 +173,19 @@ func registerOAuth(r chi.Router, prefix string, h *oauth.Handler, login bool) {
 	r.Get(prefix+"/login/callback", h.Callback)
 	r.Get(prefix+"/logout", h.Logout)
 	r.Get(prefix+"/logout/", h.Logout)
+}
+
+func notFoundHandler(staticH, sidecar http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stripped := StripMulticloud(r.URL.Path)
+		if staticH != nil && r.Method == http.MethodGet && static.IsStaticPath(stripped) {
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = stripped
+			staticH.ServeHTTP(w, r2)
+			return
+		}
+		sidecar.ServeHTTP(w, r)
+	}
 }
 
 func requestLogger(next http.Handler) http.Handler {

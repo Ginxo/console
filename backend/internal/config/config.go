@@ -28,6 +28,7 @@ type Config struct {
 	CACert         string
 	ServiceCACert  string
 	LogLevel       string
+	PublicFolder   string
 
 	OAuth2ClientID     string
 	OAuth2ClientSecret string
@@ -63,6 +64,7 @@ func Load() *Config {
 		CACert:             os.Getenv("CA_CERT"),
 		ServiceCACert:      os.Getenv("SERVICE_CA_CERT"),
 		LogLevel:           envOr("LOG_LEVEL", "debug"),
+		PublicFolder:       envOr("PUBLIC_FOLDER", "public"),
 		OAuth2ClientID:     os.Getenv("OAUTH2_CLIENT_ID"),
 		OAuth2ClientSecret: os.Getenv("OAUTH2_CLIENT_SECRET"),
 		OAuth2RedirectURL:  os.Getenv("OAUTH2_REDIRECT_URL"),

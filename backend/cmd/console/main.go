@@ -18,6 +18,7 @@ import (
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/server"
+	"github.com/stolostron/console/backend/internal/static"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -73,17 +74,25 @@ func run() error {
 		Production:    cfg.Production,
 		Client:        auth.HTTPClient(sa.CACert, 0),
 	})
+	var opts []server.Option
+	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH))
+	if !cfg.Production {
+		opts = append(opts, server.WithOAuthLogin())
+	}
 	clusterURL, err := url.Parse(cfg.ClusterAPIURL)
 	if err != nil {
 		return err
 	}
 	k8sHandler := k8sproxy.New(clusterURL, k8sproxy.TLSConfigFromCA(sa.CACert))
-
-	var opts []server.Option
-	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH), server.WithK8sProxy(k8sHandler))
-	if !cfg.Production {
-		opts = append(opts, server.WithOAuthLogin())
+	opts = append(opts, server.WithK8sProxy(k8sHandler))
+	fsys, ok := static.OpenFS(cfg.PublicFolder)
+	if !ok {
+		fsys = static.BundledFS()
 	}
+	opts = append(opts, server.WithStatic(static.New(static.Options{
+		FS:         fsys,
+		Production: os.Getenv("NODE_ENV") == "production",
+	})))
 
 	handler, err := server.Handler(cfg, opts...)
 	if err != nil {
@@ -94,6 +103,7 @@ func run() error {
 		"PORT", cfg.Port,
 		"NODE_BACKEND_URL", cfg.NodeBackendURL,
 		slog.String("CONFIG_DIR", cfg.ConfigDir),
+		slog.String("PUBLIC_FOLDER", cfg.PublicFolder),
 	)
 	return server.ListenAndServe(ctx, cfg, handler)
 }
