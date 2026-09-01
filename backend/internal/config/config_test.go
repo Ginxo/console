@@ -103,6 +103,16 @@ func TestLoad_ProxyEnvVars(t *testing.T) {
 	}
 }
 
+func TestLoad_PublicFolder(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("ENV_FILE", filepath.Join(dir, ".env"))
+	t.Setenv("PUBLIC_FOLDER", "/app/public")
+	cfg := config.Load()
+	if cfg.PublicFolder != "/app/public" {
+		t.Fatalf("PublicFolder=%q", cfg.PublicFolder)
+	}
+}
+
 func TestReloadSettings_MissingDir(t *testing.T) {
 	cfg := &config.Config{ConfigDir: filepath.Join(t.TempDir(), "missing")}
 	if err := cfg.ReloadSettings(); err != nil {

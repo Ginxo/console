@@ -32,6 +32,7 @@ type Config struct {
 	ObservabilityRoute         string
 	ClusterProxyAddonUserHost  string
 	ClusterProxyAddonUserRoute string
+	PublicFolder               string
 
 	mu       sync.RWMutex
 	settings map[string]string
@@ -64,6 +65,7 @@ func Load() *Config {
 		ObservabilityRoute:         os.Getenv("OBSERVABILITY_ROUTE"),
 		ClusterProxyAddonUserHost:  os.Getenv("CLUSTER_PROXY_ADDON_USER_HOST"),
 		ClusterProxyAddonUserRoute: os.Getenv("CLUSTER_PROXY_ADDON_USER_ROUTE"),
+		PublicFolder:               envOr("PUBLIC_FOLDER", "public"),
 		settings:                   map[string]string{},
 	}
 	_ = cfg.ReloadSettings()

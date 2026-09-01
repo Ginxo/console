@@ -21,6 +21,7 @@ import (
 	"github.com/stolostron/console/backend/internal/health"
 	applog "github.com/stolostron/console/backend/internal/log"
 	"github.com/stolostron/console/backend/internal/proxy"
+	"github.com/stolostron/console/backend/internal/static"
 )
 
 const multicloudPrefix = "/multicloud"
@@ -32,6 +33,7 @@ type handlerOptions struct {
 	prometheus    http.Handler
 	observability http.Handler
 	vmProxy       http.Handler
+	staticH       http.Handler
 }
 
 // Option configures Handler.
@@ -50,6 +52,7 @@ func WithK8sProxy(h http.Handler) Option {
 		o.k8sProxy = h
 	}
 }
+
 
 // WithManagedClusterProxy registers /managedclusterproxy/* (HTTP and WebSocket).
 func WithManagedClusterProxy(h http.Handler) Option {
@@ -76,6 +79,13 @@ func WithObservabilityProxy(h http.Handler) Option {
 func WithVMProxy(h http.Handler) Option {
 	return func(o *handlerOptions) {
 		o.vmProxy = h
+	}
+}
+
+// WithStatic serves plugin and SPA files for GET requests with known static extensions.
+func WithStatic(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.staticH = h
 	}
 }
 
@@ -210,9 +220,22 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 		registerK8sProxyRoutes(r, o.k8sProxy)
 	}
 	registerStatelessProxies(r, o)
-	r.NotFound(sidecar.ServeHTTP)
+	r.NotFound(notFoundHandler(o.staticH, sidecar))
 	r.MethodNotAllowed(sidecar.ServeHTTP)
 	return r, nil
+}
+
+func notFoundHandler(staticH, sidecar http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stripped := StripMulticloud(r.URL.Path)
+		if staticH != nil && r.Method == http.MethodGet && static.IsStaticPath(stripped) {
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = stripped
+			staticH.ServeHTTP(w, r2)
+			return
+		}
+		sidecar.ServeHTTP(w, r)
+	}
 }
 
 func requestLogger(next http.Handler) http.Handler {

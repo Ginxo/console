@@ -5,7 +5,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 ## Key Technologies
 
 - **Runtime**: Go 1.26+ (`net/http`; TLS enables HTTP/2 automatically)
-- **Router**: `chi` — probes and migrated routes registered natively; everything else is `NotFound` → reverse proxy
+- **Router**: `chi` — probes and migrated routes registered natively; static GET assets; everything else is `NotFound` → reverse proxy
 - **Proxy**: `httputil.ReverseProxy` (HTTP/1.1 to the sidecar so WebSocket upgrades work; `FlushInterval: -1` for SSE)
 - **Logging**: `log/slog` JSON (`method`, `path`, `status`, `duration`)
 - **Config watch**: `fsnotify` on `config/` (1s debounce)
@@ -27,6 +27,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `internal/config` | `.env` + `config/` directory (filename = key) |
 | `internal/auth` | Cookie/Bearer, SA token/CA, TokenReview helper |
 | `internal/events/rbac` | `GET /events/rbac` SSE: ClusterRole informer (`vm-clusterroles` label) + per-user SSAR |
+| `internal/static` | Plugin and SPA files: cache headers, CSP, brotli/gzip negotiation |
 | `internal/log` | slog JSON helper |
 | `config/` | Runtime settings shared with the Node sidecar |
 | `certs/` | TLS material (`npm run generate-certs` at repo root) |
@@ -60,6 +61,7 @@ Go backend :4000 (TLS / HTTP/2)
         ├─ GET /prometheus/*, /observability/* → metrics backends (user token)
         ├─ /virtualmachines/*, /virtualmachineinstances/*, /virtualmachinesnapshots/*,
         │    /virtualmachinerestores, GET /vmResourceUsage/* → managed cluster via addon
+        ├─ GET static assets (/plugin/*, hashed JS/CSS, locales, index.html)
         └─ everything else (original URL) ──HTTP/1.1──► Node sidecar :4001
                                                               │
                                                               ▼
@@ -75,3 +77,5 @@ Go backend :4000 (TLS / HTTP/2)
 Go exits 1 at startup if the service-account token is missing (`TOKEN` or `/var/run/secrets/kubernetes.io/serviceaccount/token`).
 
 Migrated proxy routes also read `CLUSTER_PROXY_ADDON_USER_HOST` / `CLUSTER_PROXY_ADDON_USER_ROUTE`, `PROMETHEUS_ROUTE`, `OBSERVABILITY_ROUTE`, and `SERVICE_CA_CERT` from the same `.env`.
+
+`PUBLIC_FOLDER` (default `public`) is the on-disk plugin/SPA tree. Production images copy `frontend/plugins/{acm|mce}/dist` to `/app/public/plugin`.
