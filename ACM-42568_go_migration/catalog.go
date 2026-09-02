@@ -17,10 +17,29 @@ type CatalogFile struct {
 }
 
 type Resource struct {
-	Kind                   string `yaml:"kind"`
-	APIVersion             string `yaml:"apiVersion"`
-	Polled                 bool   `yaml:"polled"`
-	ForwardEventsToClients *bool  `yaml:"forwardEventsToClients"`
+	Kind                   string            `yaml:"kind"`
+	APIVersion             string            `yaml:"apiVersion"`
+	Polled                 bool              `yaml:"polled"`
+	ForwardEventsToClients *bool             `yaml:"forwardEventsToClients"`
+	LabelSelector          map[string]string `yaml:"labelSelector"`
+	FieldSelector          map[string]string `yaml:"fieldSelector"`
+	// Source is "events" (default, events.ts definitions) or "events-rbac" (Go GET /events/rbac).
+	Source string `yaml:"source"`
+}
+
+func (r Resource) EventsSource() bool {
+	return r.Source == "" || r.Source == "events"
+}
+
+func (r Resource) ForwardsToClients() bool {
+	if r.ForwardEventsToClients == nil {
+		return true
+	}
+	return *r.ForwardEventsToClients
+}
+
+func (r Resource) SpecKey() string {
+	return r.APIVersion + "|" + r.Kind + "|" + SelectorQuery(r.LabelSelector) + "|" + SelectorQuery(r.FieldSelector)
 }
 
 type Case struct {
@@ -117,10 +136,20 @@ func LoadCatalog(dir string) ([]Case, []Resource, error) {
 func WatchedKindSet(resources []Resource) map[string]struct{} {
 	out := make(map[string]struct{})
 	for _, r := range resources {
-		if r.ForwardEventsToClients != nil && !*r.ForwardEventsToClients {
+		if !r.EventsSource() || !r.ForwardsToClients() {
 			continue
 		}
 		out[r.Kind] = struct{}{}
+	}
+	return out
+}
+
+func EventsWatchSpecs(resources []Resource) []Resource {
+	out := make([]Resource, 0, len(resources))
+	for _, r := range resources {
+		if r.EventsSource() {
+			out = append(out, r)
+		}
 	}
 	return out
 }

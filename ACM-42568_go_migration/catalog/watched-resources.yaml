@@ -1,6 +1,7 @@
 # Copyright Contributors to the Open Cluster Management project
-# Kinds watched by backend/src/routes/events.ts and streamed on GET /events.
-# Authentication is watched but not forwarded (forwardEventsToClients: false).
+# Watch specs from backend-node/src/routes/events.ts `definitions`.
+# Selectors, polled, and forwardEventsToClients must stay 1:1 with that array.
+# ClusterRole is Go-only (GET /events/rbac); it is not in events.ts.
 resources:
   - kind: ClusterManagementAddOn
     apiVersion: addon.open-cluster-management.io/v1alpha1
@@ -41,6 +42,8 @@ resources:
     apiVersion: config.openshift.io/v1
   - kind: CertificateSigningRequest
     apiVersion: certificates.k8s.io/v1
+    labelSelector:
+      open-cluster-management.io/cluster-name: ""
   - kind: ManagedCluster
     apiVersion: cluster.open-cluster-management.io/v1
   - kind: Placement
@@ -101,10 +104,35 @@ resources:
     apiVersion: tower.ansible.com/v1alpha1
   - kind: ConfigMap
     apiVersion: v1
+    fieldSelector:
+      metadata.name: assisted-service
+  - kind: ConfigMap
+    apiVersion: v1
+    fieldSelector:
+      metadata.namespace: openshift-config-managed
+      metadata.name: console-public
+  - kind: ConfigMap
+    apiVersion: v1
+    fieldSelector:
+      metadata.name: console-search-config
   - kind: Namespace
     apiVersion: v1
   - kind: Secret
     apiVersion: v1
+    labelSelector:
+      cluster.open-cluster-management.io/credentials: ""
+  - kind: Secret
+    apiVersion: v1
+    labelSelector:
+      cluster.open-cluster-management.io/type: ans
+  - kind: Secret
+    apiVersion: v1
+    fieldSelector:
+      metadata.name: auto-import-secret
+  - kind: Secret
+    apiVersion: v1
+    labelSelector:
+      argocd.argoproj.io/secret-type: repository
   - kind: PolicyReport
     apiVersion: wgpolicyk8s.io/v1alpha2
   - kind: HostedCluster
@@ -113,15 +141,33 @@ resources:
     apiVersion: hypershift.openshift.io/v1beta1
   - kind: AgentMachine
     apiVersion: capi-provider.agent-install.openshift.io/v1alpha1
+  - kind: ConfigMap
+    apiVersion: v1
+    labelSelector:
+      hypershift.openshift.io/supported-versions: "true"
   - kind: Search
     apiVersion: search.open-cluster-management.io/v1alpha1
+  - kind: ConfigMap
+    apiVersion: v1
+    fieldSelector:
+      metadata.name: grafana-dashboard-acm-openshift-virtualization-clusters-overview
+  - kind: ConfigMap
+    apiVersion: v1
+    fieldSelector:
+      metadata.name: grafana-dashboard-acm-openshift-virtualization-single-vm-view
   - kind: MulticlusterRoleAssignment
     apiVersion: rbac.open-cluster-management.io/v1beta1
   - kind: User
     apiVersion: user.openshift.io/v1
   - kind: Group
     apiVersion: user.openshift.io/v1
-  - kind: ClusterRole
-    apiVersion: rbac.authorization.k8s.io/v1
   - kind: Service
     apiVersion: v1
+    fieldSelector:
+      metadata.name: cluster-proxy-addon-user
+      metadata.namespace: multicluster-engine
+  - kind: ClusterRole
+    apiVersion: rbac.authorization.k8s.io/v1
+    source: events-rbac
+    labelSelector:
+      rbac.open-cluster-management.io/filter: vm-clusterroles
