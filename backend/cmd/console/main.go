@@ -17,11 +17,12 @@ import (
 	"github.com/stolostron/console/backend/internal/clusterproxy"
 	"github.com/stolostron/console/backend/internal/config"
 	rbacevents "github.com/stolostron/console/backend/internal/events/rbac"
+	"github.com/stolostron/console/backend/internal/informers"
 	"github.com/stolostron/console/backend/internal/k8sproxy"
 	applog "github.com/stolostron/console/backend/internal/log"
-	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/mcproxy"
 	"github.com/stolostron/console/backend/internal/metricsproxy"
+	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/server"
 	"github.com/stolostron/console/backend/internal/static"
 	"github.com/stolostron/console/backend/internal/vmproxy"
@@ -68,6 +69,7 @@ func run() error {
 		return err
 	}
 	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
+	infCache := informers.Start(ctx, dyn, disc)
 
 	oauthH := oauth.New(oauth.Options{
 		ClientID:      cfg.OAuth2ClientID,
@@ -83,7 +85,7 @@ func run() error {
 	var opts []server.Option
 	opts = append(opts, server.WithRBACEvents(rbacHandler), server.WithOAuth(oauthH))
 	if !cfg.Production {
-		opts = append(opts, server.WithOAuthLogin())
+		opts = append(opts, server.WithOAuthLogin(), server.WithDebugSnapshot(informers.NewSnapshotHandler(infCache, restCfg)))
 	}
 	clusterURL, err := url.Parse(cfg.ClusterAPIURL)
 	if err != nil {

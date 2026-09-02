@@ -38,6 +38,9 @@ type handlerOptions struct {
 	observability http.Handler
 	vmProxy       http.Handler
 	staticH       http.Handler
+	user          http.Handler
+	clusterInfo   http.Handler
+	debugSnapshot http.Handler
 }
 
 // Option configures Handler.
@@ -103,6 +106,27 @@ func WithVMProxy(h http.Handler) Option {
 func WithStatic(h http.Handler) Option {
 	return func(o *handlerOptions) {
 		o.staticH = h
+	}
+}
+
+// WithUser registers /authenticated, /username, and /userpreference.
+func WithUser(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.user = h
+	}
+}
+
+// WithClusterInfo registers hub, cluster-version, hypershift, MCH/MCE components, operatorCheck, and apiPaths.
+func WithClusterInfo(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.clusterInfo = h
+	}
+}
+
+// WithDebugSnapshot registers GET /debug/informer-snapshot (development informer cache dump).
+func WithDebugSnapshot(h http.Handler) Option {
+	return func(o *handlerOptions) {
+		o.debugSnapshot = h
 	}
 }
 
@@ -242,6 +266,12 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 		registerOAuth(r, multicloudPrefix, o.oauth, o.oauthLogin)
 	}
 	registerStatelessProxies(r, o)
+	registerUserRoutes(r, o)
+	registerClusterInfoRoutes(r, o)
+	if o.debugSnapshot != nil {
+		r.Get("/debug/informer-snapshot", o.debugSnapshot.ServeHTTP)
+		r.Get(multicloudPrefix+"/debug/informer-snapshot", o.debugSnapshot.ServeHTTP)
+	}
 	r.NotFound(notFoundHandler(o.staticH, sidecar))
 	r.MethodNotAllowed(sidecar.ServeHTTP)
 	return r, nil
