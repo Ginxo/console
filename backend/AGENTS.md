@@ -32,7 +32,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `internal/static` | Plugin and SPA files: cache headers, CSP, brotli/gzip negotiation |
 | `internal/log` | slog JSON helper |
 | `config/` | Runtime settings shared with the Node sidecar |
-| `certs/` | TLS material (`npm run generate-certs` at repo root) |
+| `certs/` | TLS material (`npm run setup` / `npm run ci:backend` create when missing; `npm run generate-certs` to force) |
 
 ## Commands
 
@@ -45,7 +45,7 @@ From the repo root (preferred), or `cd backend`:
 | `npm run lint:backend` | `golangci-lint` (see `backend/.golangci.yml`) |
 | `npm run check:backend` | tests + golangci-lint |
 | `npm run build:backend` | `go build -o bin/console ./cmd/console` |
-| `npm run setup:hub` | Regenerate `backend/.env` and `backend/certs` after `oc login` to a new cluster |
+| `npm run setup:hub` | `rm -rf backend/.env backend/certs && npm run setup && npm run ci:backend` after `oc login` to a new cluster |
 
 ## Architecture
 
