@@ -29,3 +29,26 @@ cases:
           - ansibleIntegration
           - singleNodeOpenshift
           - globalSearchFeatureFlag
+  - id: events-rbac-sse
+    group: sse
+    kind: sse
+    description: GET /events/rbac SSE ClusterRole snapshot (Go-owned; Node never served this path)
+    method: GET
+    path: /events/rbac
+    auth: both
+    alsoMulticloud: true
+    soft: true
+    softStatuses: [404]
+    timeoutSeconds: 30
+    headers:
+      Accept: text/event-stream
+    expect:
+      status: [200]
+      contentTypeContains: text/event-stream
+      headerEquals:
+        cache-control: no-store, no-transform
+      sse:
+        firstType: START
+        lastType: LOADED
+        requireTypes: [START, EOP, LOADED]
+        objectHasKindApiVersionName: true

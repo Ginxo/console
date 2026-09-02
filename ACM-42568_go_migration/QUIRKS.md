@@ -60,7 +60,7 @@ TokenReview username is lowercased and non `[a-z0-9-.]` characters become `-` fo
 
 ### Authentication CR is not fanned out on SSE
 
-`{ kind: 'Authentication', apiVersion: 'config.openshift.io/v1', forwardEventsToClients: false }`. Hub still reads it for `/hub`.
+`{ kind: 'Authentication', apiVersion: 'config.openshift.io/v1', forwardEventsToClients: false }`. Hub still reads it for `/hub`. The informer cache (ACM-42597) still stores it; snapshot compare **includes** Authentication and **excludes** Argo `isPolled` kinds.
 
 **Decision:** replicate. Watched-kind set used by SSE tests omits Authentication.
 
@@ -107,6 +107,22 @@ Long Kubernetes names need this; unmatched routes 404.
 - Webpack devServer missing `/apiPaths`, `/cluster-version`, `/placement-debug` (plugin proxy is prefix-based so production plugins are fine).
 - Dead webpack entries `/multicloud/common`, `/multicloud/console-links` (not backend routes).
 
-## Not in Node (do not require against upstream/main)
+## Plugin proxy `authorize: true` and hub alignment
 
-Routes added only on the Go skeleton (for example `/events/rbac`) are out of this catalog until Node never served them.
+OpenShift Console on :9000 proxies to `https://localhost:4000` with `authorize: true`. The user token is validated against `CLUSTER_API_URL`. If that URL does not match `oc whoami --show-server`, authenticated routes 401 and the UI redirects to `/dashboards`.
+
+**Decision:** not a backend bug. `run-catalog.sh` preflight (and `scripts/check-hub-alignment.sh` when present) fail fast. Fix: `npm run setup:hub`.
+
+## TLS on :4000
+
+Plugin proxy and contract tests use `https://localhost:4000`. Missing `backend/certs/` makes Go serve HTTP; Console logs `tls: first record does not look like a TLS handshake`.
+
+**Decision:** preflight requires certs when the backend URL is HTTPS. `npm run generate-certs` then restart `npm run plugins`.
+
+## Not in Node (do not require against sidecar-only)
+
+`GET /events/rbac` is Go-owned (never served by Node). Catalog case `events-rbac-sse` is **soft** and skips on 404 so a sidecar-only run stays green.
+
+## SSE / WebSocket compare
+
+`CONTRACT_COMPARE_URL` diffs **REST only**. SSE and WebSocket are skipped on purpose (`shouldCompareREST`). A Node-vs-Go SSE shadow-diff (including multi-role RBAC) is **ACM-42598**. The hook is already isolated so 42598 can enable it without changing REST compare.
