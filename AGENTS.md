@@ -142,3 +142,4 @@ Features can be enabled/disabled via the `console-config` ConfigMap in the insta
 - **Certificate errors** — Remove `backend/certs/` and run `npm run generate-certs`
 - **Module resolution errors** — Verify Node.js and npm versions match `.nvmrc` / `.tool-versions`; version mismatches break ESM resolution
 - **Missing `.env`** — Run `npm run setup` (or `npm run setup:hub` after `oc login` to a new cluster) to generate `backend/.env`
+- **Plugin UI redirects to `/dashboards`** — `oc whoami --show-server` must match `CLUSTER_API_URL` in `backend/.env`. After `oc login` to a new hub, run `npm run setup:hub` and restart `npm run plugins`. `start-ocp-console.sh` runs `scripts/check-hub-alignment.sh` to catch this early.
