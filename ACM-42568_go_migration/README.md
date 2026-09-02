@@ -68,6 +68,8 @@ cd ACM-42568_go_migration
 
 The test **skips** (not fail) when `GET /debug/informer-snapshot` is missing (Go cache not wired yet). After ACM-42597:
 
+Go informers start **after** `:4000` is bound. `CONSOLE_INFORMER_CACHE=0` disables them. After sync, the Go process logs `informer cache memory` with `heapAlloc` — compare that to the sidecar `INFO:memory` `eventCache` size, not combined RSS. The Go store is uncompressed `unstructured` (managedFields stripped except Policy).
+
 | Variable | Purpose |
 |----------|---------|
 | `CONTRACT_GO_SNAPSHOT_URL` | Default `{BACKEND}/debug/informer-snapshot` |

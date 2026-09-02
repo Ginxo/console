@@ -2,7 +2,8 @@
 # Copyright Contributors to the Open Cluster Management project
 #
 # ACM-42597 snapshot gate: compare Go informer cache vs Node (or a file dump).
-# Skips (exit 0) when GET /debug/informer-snapshot is 404 — Go cache not wired yet.
+# On ACM-42597+, GET /debug/informer-snapshot is served in non-production.
+# Skips when the endpoint is 404 (older backends).
 #
 # Usage (npm run plugins already up):
 #   ./compare-informer-cache.sh
