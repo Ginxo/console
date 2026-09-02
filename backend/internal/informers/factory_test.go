@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/rest"
 	ktesting "k8s.io/client-go/testing"
 )
 
@@ -261,4 +263,82 @@ func names(objs []unstructured.Unstructured) []string {
 		out = append(out, o.GetName())
 	}
 	return out
+}
+
+func TestRESTConfigDoesNotMutateBase(t *testing.T) {
+	base := &rest.Config{Host: "https://example.com", QPS: 5, Burst: 10}
+	got := RESTConfig(base)
+	if got.QPS != InformerQPS || got.Burst != InformerBurst {
+		t.Fatalf("QPS/Burst %v/%d", got.QPS, got.Burst)
+	}
+	if base.QPS != 5 || base.Burst != 10 {
+		t.Fatal("base rest.Config must not be mutated")
+	}
+	if got.Host != base.Host {
+		t.Fatal("host should copy")
+	}
+}
+
+func TestStartCacheNil(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	StartCache(ctx, nil, nil, nil)
+}
+
+func TestStartConcurrencyLimitsLists(t *testing.T) {
+	orig := startConcurrency
+	startConcurrency = 2
+	resetStartSem()
+	t.Cleanup(func() {
+		startConcurrency = orig
+		resetStartSem()
+	})
+
+	scheme := runtime.NewScheme()
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
+	listKinds := map[schema.GroupVersionResource]string{gvr: "ConfigMapList"}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds,
+		uObj("v1", "ConfigMap", "ns", "a", "uid-a", nil),
+		uObj("v1", "ConfigMap", "ns", "b", "uid-b", nil),
+		uObj("v1", "ConfigMap", "ns", "c", "uid-c", nil),
+		uObj("v1", "ConfigMap", "ns", "d", "uid-d", nil),
+	)
+
+	var inflight, max atomic.Int32
+	block := make(chan struct{})
+	client.PrependReactor("list", "configmaps", func(action ktesting.Action) (bool, runtime.Object, error) {
+		n := inflight.Add(1)
+		for {
+			old := max.Load()
+			if n <= old || max.CompareAndSwap(old, n) {
+				break
+			}
+		}
+		<-block
+		inflight.Add(-1)
+		return false, nil, nil
+	})
+
+	mapper := mapperFor("v1", metav1.APIResource{Name: "configmaps", Kind: "ConfigMap", Namespaced: true, Verbs: []string{"list", "watch"}})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c := StartSpecs(ctx, client, mapper, []WatchSpec{
+		watch("ConfigMap", "v1").fields("metadata.name", "a"),
+		watch("ConfigMap", "v1").fields("metadata.name", "b"),
+		watch("ConfigMap", "v1").fields("metadata.name", "c"),
+		watch("ConfigMap", "v1").fields("metadata.name", "d"),
+	})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if max.Load() >= 2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := max.Load(); got > 2 {
+		t.Fatalf("concurrent lists %d want <= 2", got)
+	}
+	close(block)
+	waitSynced(t, c)
 }

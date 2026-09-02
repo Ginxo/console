@@ -63,6 +63,7 @@ func TestIsUnavailable(t *testing.T) {
 		{apierrors.NewNotFound(schema.GroupResource{Resource: "x"}, "n"), true},
 		{apierrors.NewForbidden(schema.GroupResource{Resource: "x"}, "n", errors.New("denied")), true},
 		{fmt.Errorf("%w: v1 Thing", errKindNotFound), true},
+		{errors.New("not found"), true},
 	}
 	for _, tc := range cases {
 		if got := isUnavailable(tc.err); got != tc.ok {

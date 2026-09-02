@@ -11,6 +11,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"k8s.io/client-go/discovery"
+	discocache "k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/stolostron/console/backend/internal/auth"
@@ -69,7 +72,18 @@ func run() error {
 		return err
 	}
 	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
-	infCache := informers.Start(ctx, dyn, disc)
+
+	infCfg := informers.RESTConfig(restCfg)
+	dyn, err := dynamic.NewForConfig(infCfg)
+	if err != nil {
+		return err
+	}
+	disco, err := discovery.NewDiscoveryClientForConfig(infCfg)
+	if err != nil {
+		return err
+	}
+	mapper := discocache.NewMemCacheClient(disco)
+	infCache := informers.New(informers.DefaultWatchSpecs())
 
 	oauthH := oauth.New(oauth.Options{
 		ClientID:      cfg.OAuth2ClientID,
@@ -140,10 +154,17 @@ func run() error {
 	applog.Logger().Info("process start",
 		"PORT", cfg.Port,
 		"NODE_BACKEND_URL", cfg.NodeBackendURL,
+		"informerCache", cfg.InformerCache,
 		slog.String("CONFIG_DIR", cfg.ConfigDir),
 		slog.String("PUBLIC_FOLDER", cfg.PublicFolder),
 	)
-	return server.ListenAndServe(ctx, cfg, handler)
+	return server.ListenAndServe(ctx, cfg, handler, func() {
+		if !cfg.InformerCache {
+			applog.Logger().Info("informer cache disabled", "CONSOLE_INFORMER_CACHE", os.Getenv("CONSOLE_INFORMER_CACHE"))
+			return
+		}
+		informers.StartCache(ctx, infCache, dyn, mapper)
+	})
 }
 
 var errMissingToken = errors.New("service account token missing")

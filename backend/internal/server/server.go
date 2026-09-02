@@ -277,6 +277,29 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 	return r, nil
 }
 
+func registerUserRoutes(r chi.Router, o *handlerOptions) {
+	if o.user == nil {
+		return
+	}
+	registerAliasedGet(r, o.user, "/authenticated", "/username", "/userpreference")
+}
+
+func registerClusterInfoRoutes(r chi.Router, o *handlerOptions) {
+	if o.clusterInfo == nil {
+		return
+	}
+	registerAliasedGet(r, o.clusterInfo,
+		"/hub",
+		"/cluster-version",
+		"/hypershift-status",
+		"/multiclusterhub/components",
+		"/multiclusterengine/components",
+		"/apiPaths",
+	)
+	r.Post("/operatorCheck", o.clusterInfo.ServeHTTP)
+	r.Post(multicloudPrefix+"/operatorCheck", o.clusterInfo.ServeHTTP)
+}
+
 func registerOAuth(r chi.Router, prefix string, h *oauth.Handler, login bool) {
 	r.Get(prefix+"/configure", h.Configure)
 	if !login {
@@ -349,13 +372,21 @@ func (s *statusRecorder) Flush() {
 
 func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
-// ListenAndServe starts TLS when certs exist (net/http enables HTTP/2 automatically), otherwise cleartext HTTP/1.1.
-func ListenAndServe(ctx context.Context, cfg *config.Config, handler http.Handler) error {
+// ListenAndServe binds the listener first, then runs optional onListening hooks
+// (informer start) so the public port is up before hub list/watch begins.
+func ListenAndServe(ctx context.Context, cfg *config.Config, handler http.Handler, onListening ...func()) error {
 	addr := net.JoinHostPort("", cfg.Port)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
+	}
+	if len(onListening) > 0 && onListening[0] != nil {
+		onListening[0]()
 	}
 
 	errCh := make(chan error, 1)
@@ -365,12 +396,12 @@ func ListenAndServe(ctx context.Context, cfg *config.Config, handler http.Handle
 		if _, err := os.Stat(certFile); err == nil {
 			if _, err := os.Stat(keyFile); err == nil {
 				applog.Logger().Info("server start", "secure", true, "addr", addr)
-				errCh <- srv.ListenAndServeTLS(certFile, keyFile)
+				errCh <- srv.ServeTLS(ln, certFile, keyFile)
 				return
 			}
 		}
 		applog.Logger().Info("server start", "secure", false, "addr", addr)
-		errCh <- srv.ListenAndServe()
+		errCh <- srv.Serve(ln)
 	}()
 
 	select {

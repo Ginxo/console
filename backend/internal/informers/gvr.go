@@ -41,5 +41,9 @@ func isUnavailable(err error) bool {
 	if err == nil {
 		return false
 	}
-	return apierrors.IsNotFound(err) || apierrors.IsForbidden(err) || errors.Is(err, errKindNotFound)
+	if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) || errors.Is(err, errKindNotFound) {
+		return true
+	}
+	// Cached discovery returns a plain "not found" for missing API groups (not apierrors.StatusError).
+	return strings.Contains(strings.ToLower(err.Error()), "not found")
 }

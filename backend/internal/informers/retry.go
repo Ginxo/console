@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	resyncPeriod    = 10 * time.Minute
+	// resyncPeriod 0 matches Node startWatching: no periodic full relist.
+	resyncPeriod    = 0
 	retryBase       = 60 * time.Second
 	retryJitter     = 10 * time.Second
 	syncGiveUpAfter = 45 * time.Second

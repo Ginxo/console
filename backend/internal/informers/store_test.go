@@ -30,6 +30,9 @@ func TestHasSyncedNilAndEmpty(t *testing.T) {
 	if newCache(nil).HasSynced() {
 		t.Fatal("empty specs")
 	}
+	if c.itemCount() != 0 {
+		t.Fatal("nil itemCount")
+	}
 }
 
 func TestHasSyncedUnavailableAndSynced(t *testing.T) {

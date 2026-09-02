@@ -20,6 +20,12 @@ func TestWaitRetryCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if waitRetry(ctx) {
-		t.Fatal("expected false when context already cancelled")
+		t.Fatal("expected false when context already canceled")
+	}
+}
+
+func TestResyncDisabled(t *testing.T) {
+	if resyncPeriod != 0 {
+		t.Fatalf("resyncPeriod=%v want 0 (no periodic full relist)", resyncPeriod)
 	}
 }

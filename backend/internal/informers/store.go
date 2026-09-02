@@ -180,6 +180,23 @@ func (c *InformerCache) Snapshot() []ResourceKey {
 	return keys
 }
 
+// itemCount is a lock-scoped store length sum for logs (not deduplicated).
+func (c *InformerCache) itemCount() int {
+	if c == nil {
+		return 0
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	n := 0
+	for _, s := range c.states {
+		if s.informer == nil {
+			continue
+		}
+		n += len(s.informer.GetStore().List())
+	}
+	return n
+}
+
 // SpecStatuses is included in the debug dump for operators.
 type SpecStatus struct {
 	Kind        string `json:"kind"`
