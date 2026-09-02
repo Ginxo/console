@@ -43,6 +43,8 @@ Standalone login (`GET /login`, `/login/callback`, `/logout`) is served by the G
 
 The Go listener also runs a client-go informer cache (`backend/internal/informers`) for the same watch specs as Node `events.ts` (`definitions`). `GET /events` is served by Go (`backend/internal/events/hub`) with per-user SelfSubjectAccessReview filtering (60s cache). Node `startWatching()` still runs so aggregators can read `resourceCache` (dual-run). Set `CONSOLE_INFORMER_CACHE=0` to disable Go watches and proxy `/events` to the sidecar. The Go store holds `unstructured.Unstructured` (managedFields stripped except Policy). Development builds expose `GET /debug/informer-snapshot`. `GET /events/rbac` remains a separate ClusterRole informer.
 
+TLS on the public Go listener (`backend/internal/tlsconfig`) follows the hub `APIServer` `tlsSecurityProfile` (Old / Intermediate / Modern / Custom) and reloads `certs/tls.crt` + `tls.key` without restarting the process. Existing connections keep their handshake; new connections use the updated config. The Node sidecar still watches the profile for its own `:4001` listener.
+
 DELETED resource events are sent to every SSE client without an access check (bug-compatible with Node). That is a known quirk to fix later.
 
 Static plugin assets (`plugin-manifest.json`, `plugin-entry.js`, hashed JS/CSS, locales) are served by the Go listener with the same cache headers, CSP, and brotli/gzip content negotiation as the former Node `serve` route.
