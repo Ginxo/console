@@ -123,7 +123,8 @@ func recordAndCompare(t *testing.T, cfg Config, cs Case, path string, cap Captur
 			failHard(t, reportName, fmt.Errorf("record: %w", err))
 		}
 	}
-	if cfg.CompareURL == "" || strings.EqualFold(cs.Kind, "sse") || strings.EqualFold(cs.Kind, "websocket") {
+	if cfg.CompareURL == "" || !shouldCompareREST(cs) {
+		// SSE/WebSocket shadow-diff is ACM-42598; CONTRACT_COMPARE_URL is REST only.
 		return
 	}
 	other, err := cfg.Do(cfg.NewHTTPClient(timeoutFor(cfg, cs)), cfg.CompareURL, cs, path)
@@ -198,7 +199,7 @@ func TestLoadCatalog(t *testing.T) {
 	if len(cases) < 40 {
 		t.Fatalf("expected a full catalog, got %d cases", len(cases))
 	}
-	if len(resources) < 50 {
+	if len(resources) < 67 {
 		t.Fatalf("expected watched resources, got %d", len(resources))
 	}
 	seen := map[string]struct{}{}
