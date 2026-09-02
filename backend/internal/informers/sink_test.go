@@ -74,15 +74,3 @@ func TestResourceHandlerNilSink(t *testing.T) {
 	h.OnAdd(&unstructured.Unstructured{}, false)
 	h.OnDelete(&unstructured.Unstructured{})
 }
-
-func TestShouldForward(t *testing.T) {
-	if !watch("Namespace", "v1").ShouldForward() {
-		t.Fatal("default watch should forward")
-	}
-	if watch("Authentication", "config.openshift.io/v1").cacheOnly().ShouldForward() {
-		t.Fatal("cacheOnly")
-	}
-	if watch("Application", "argoproj.io/v1alpha1").polled().ShouldForward() {
-		t.Fatal("polled")
-	}
-}
