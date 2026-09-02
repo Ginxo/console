@@ -47,3 +47,18 @@ Fix: oc login to the hub cluster, then run: npm run setup:hub
 EOF
 	exit 1
 fi
+
+CERT_DIR="${ROOT_DIR}/backend/certs"
+if [[ ! -f "${CERT_DIR}/tls.crt" || ! -f "${CERT_DIR}/tls.key" ]]; then
+	cat >&2 <<EOF
+error: backend TLS certs missing (${CERT_DIR}/tls.{crt,key})
+
+The OpenShift Console plugin proxy expects https://localhost:4000. Without certs the Go
+listener serves plain HTTP and the console logs:
+  http: proxy error: tls: first record does not look like a TLS handshake
+
+Fix: npm run generate-certs
+Then restart npm run plugins (Go and the Node sidecar read certs only at startup).
+EOF
+	exit 1
+fi
