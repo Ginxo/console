@@ -46,6 +46,9 @@ func TestHandlerUnauthorized(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status %d", rec.Code)
 	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("body %q", rec.Body.String())
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/events", nil)
 	req.Header.Set("Authorization", "Bearer bad")
@@ -54,6 +57,9 @@ func TestHandlerUnauthorized(t *testing.T) {
 	h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status %d", rec.Code)
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("body %q", rec.Body.String())
 	}
 }
 
