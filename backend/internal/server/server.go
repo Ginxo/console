@@ -323,6 +323,39 @@ func registerOAuth(r chi.Router, prefix string, h *oauth.Handler, login bool) {
 	r.Get(prefix+"/logout/", h.Logout)
 }
 
+func stripPathHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r2 := r.Clone(r.Context())
+		r2.URL.Path = StripMulticloud(r.URL.Path)
+		h.ServeHTTP(w, r2)
+	})
+}
+
+func registerUserRoutes(r chi.Router, o *handlerOptions) {
+	if o.user == nil {
+		return
+	}
+	h := stripPathHandler(o.user)
+	registerAliasedGet(r, h, "/authenticated", "/username")
+	registerAliased(r, h, "/userpreference")
+}
+
+func registerClusterInfoRoutes(r chi.Router, o *handlerOptions) {
+	if o.clusterInfo == nil {
+		return
+	}
+	h := stripPathHandler(o.clusterInfo)
+	registerAliasedGet(r, h,
+		"/hub",
+		"/cluster-version",
+		"/hypershift-status",
+		"/multiclusterhub/components",
+		"/multiclusterengine/components",
+		"/apiPaths",
+	)
+	registerAliased(r, h, "/operatorCheck")
+}
+
 func notFoundHandler(staticH, sidecar http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stripped := StripMulticloud(r.URL.Path)

@@ -27,6 +27,9 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `internal/config` | `.env` + `config/` directory (filename = key) |
 | `internal/auth` | Cookie/Bearer, SA token/CA, TokenReview helper, OCM SSO client-credentials token |
 | `internal/oauth` | `/configure` discovery; standalone `/login` `/login/callback` `/logout` (OpenShift OAuth and OIDC) |
+| `internal/user` | `/authenticated`, `/username`, `/userpreference` (TokenReview and UserPreference CR) |
+| `internal/clusterinfo` | `/hub`, `/cluster-version`, `/hypershift-status`, MCH/MCE components, `/operatorCheck`, `/apiPaths` |
+| `internal/cors` | Development CORS middleware (OPTIONS preflight for standalone dev) |
 | `internal/events/rbac` | `GET /events/rbac` SSE: ClusterRole informer (`vm-clusterroles` label) + per-user SSAR |
 | `internal/events/hub` | `GET /events` SSE: informer fan-out, snapshot packets, per-user SSAR (60s TTL). DELETED is not RBAC-filtered (bug-compatible with Node). `CONSOLE_INFORMER_CACHE=0` proxies `/events` to Node |
 | `internal/informers` | Hub resource cache (~67 watch specs, dual-run with Node). Dev: `GET /debug/informer-snapshot` |
@@ -65,6 +68,9 @@ Go backend :4000 (TLS / HTTP/2)
         │    (also /multicloud/…)
         ├─ GET /configure (OAuth/OIDC token_endpoint discovery)
         ├─ GET /login, /login/callback, /logout (standalone OAuth/OIDC; non-production)
+        ├─ GET /authenticated, /username, /userpreference (user auth and preferences)
+        ├─ GET /hub, /cluster-version, /hypershift-status, /multiclusterhub/components,
+        │    /multiclusterengine/components, GET /apiPaths, POST /operatorCheck
         ├─ ALL /managedclusterproxy/* → cluster-proxy addon (user token; WebSocket)
         ├─ GET /prometheus/*, /observability/* → metrics backends (user token)
         ├─ /virtualmachines/*, /virtualmachineinstances/*, /virtualmachinesnapshots/*,
