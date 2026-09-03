@@ -289,29 +289,6 @@ func Handler(cfg *config.Config, opts ...Option) (http.Handler, error) {
 	return r, nil
 }
 
-func registerUserRoutes(r chi.Router, o *handlerOptions) {
-	if o.user == nil {
-		return
-	}
-	registerAliasedGet(r, o.user, "/authenticated", "/username", "/userpreference")
-}
-
-func registerClusterInfoRoutes(r chi.Router, o *handlerOptions) {
-	if o.clusterInfo == nil {
-		return
-	}
-	registerAliasedGet(r, o.clusterInfo,
-		"/hub",
-		"/cluster-version",
-		"/hypershift-status",
-		"/multiclusterhub/components",
-		"/multiclusterengine/components",
-		"/apiPaths",
-	)
-	r.Post("/operatorCheck", o.clusterInfo.ServeHTTP)
-	r.Post(multicloudPrefix+"/operatorCheck", o.clusterInfo.ServeHTTP)
-}
-
 func registerOAuth(r chi.Router, prefix string, h *oauth.Handler, login bool) {
 	r.Get(prefix+"/configure", h.Configure)
 	if !login {

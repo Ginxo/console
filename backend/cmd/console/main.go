@@ -89,7 +89,7 @@ func run() error {
 	rbacHandler := rbacevents.NewHandler(store, rbacevents.NewAPIAuth(restCfg), rbacevents.NewSSARAccess(restCfg))
 
 	infCfg := informers.RESTConfig(restCfg)
-	dyn, err := dynamic.NewForConfig(infCfg)
+	infDyn, err := dynamic.NewForConfig(infCfg)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func run() error {
 			applog.Logger().Info("informer cache disabled", "CONSOLE_INFORMER_CACHE", os.Getenv("CONSOLE_INFORMER_CACHE"))
 			return
 		}
-		informers.StartCache(ctx, infCache, dyn, mapper)
+		informers.StartCache(ctx, infCache, infDyn, mapper)
 	})
 }
 
