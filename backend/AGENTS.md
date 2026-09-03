@@ -9,6 +9,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 - **Proxy**: `httputil.ReverseProxy` (HTTP/1.1 to the sidecar so WebSocket upgrades work; `FlushInterval: -1` for SSE)
 - **Logging**: `log/slog` JSON (`method`, `path`, `status`, `duration`)
 - **Config watch**: `fsnotify` on `config/` (1s debounce)
+- **TLS**: `GetConfigForClient` / `GetCertificate` hot-reload of OpenShift `APIServer` `tlsSecurityProfile` (Old/Intermediate/Modern/Custom) and `certs/tls.{crt,key}`; no server restart. Default Intermediate until the watch returns. Node sidecar keeps its own `tlsProfileWatch`.
 - **Auth**: cookie `acm-access-token-cookie` then `Authorization: Bearer`; TokenReview is a library, not a global gate
 
 ## Source Layout
@@ -33,6 +34,7 @@ Public listener for the ACM/MCE console. During the Node-to-Go migration it owns
 | `internal/events/rbac` | `GET /events/rbac` SSE: ClusterRole informer (`vm-clusterroles` label) + per-user SSAR |
 | `internal/events/hub` | `GET /events` SSE: informer fan-out, snapshot packets, per-user SSAR (60s TTL). DELETED is not RBAC-filtered (bug-compatible with Node). `CONSOLE_INFORMER_CACHE=0` proxies `/events` to Node |
 | `internal/informers` | Hub resource cache (~67 watch specs, dual-run with Node). Dev: `GET /debug/informer-snapshot` |
+| `internal/tlsconfig` | OpenShift TLS security profile + certificate hot-reload (`GetConfigForClient`) |
 | `internal/static` | Plugin and SPA files: cache headers, CSP, brotli/gzip negotiation |
 | `internal/log` | slog JSON helper |
 | `config/` | Runtime settings shared with the Node sidecar |

@@ -194,7 +194,7 @@ func run() error {
 		slog.String("CONFIG_DIR", cfg.ConfigDir),
 		slog.String("PUBLIC_FOLDER", cfg.PublicFolder),
 	)
-	return server.ListenAndServe(ctx, cfg, handler, func() {
+	return server.ListenAndServe(ctx, cfg, handler, dyn, func() {
 		if !cfg.InformerCache {
 			applog.Logger().Info("informer cache disabled", "CONSOLE_INFORMER_CACHE", os.Getenv("CONSOLE_INFORMER_CACHE"))
 			return
