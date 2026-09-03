@@ -584,7 +584,7 @@ func TestUnmigratedRoutesStillProxied(t *testing.T) {
 	ts := httptest.NewServer(h)
 	defer ts.Close()
 
-	for _, path := range []string{"/hub", "/multicloud/search", "/apiPaths", "/multicloud/apiPaths"} {
+	for _, path := range []string{"/multicloud/proxy/search", "/multicloud/events"} {
 		resp, getErr := ts.Client().Get(ts.URL + path)
 		if getErr != nil {
 			t.Fatal(getErr)

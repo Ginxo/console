@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/stolostron/console/backend/internal/auth"
+	"github.com/stolostron/console/backend/internal/clusterinfo"
 	"github.com/stolostron/console/backend/internal/clusterproxy"
 	"github.com/stolostron/console/backend/internal/config"
 	rbacevents "github.com/stolostron/console/backend/internal/events/rbac"
@@ -28,6 +29,7 @@ import (
 	"github.com/stolostron/console/backend/internal/oauth"
 	"github.com/stolostron/console/backend/internal/server"
 	"github.com/stolostron/console/backend/internal/static"
+	"github.com/stolostron/console/backend/internal/user"
 	"github.com/stolostron/console/backend/internal/vmproxy"
 )
 
@@ -64,6 +66,18 @@ func run() error {
 		return err
 	}
 	kube, err := kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+	dyn, err := dynamic.NewForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+	disc, err := discovery.NewDiscoveryClientForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+	reviewer, err := auth.NewTokenReviewer(cfg, sa)
 	if err != nil {
 		return err
 	}
@@ -143,6 +157,16 @@ func run() error {
 			TLSConfig:  serviceTLS,
 			RESTConfig: restCfg,
 			SAToken:    sa.Token,
+		})),
+		server.WithUser(user.New(user.Options{
+			RESTConfig: restCfg,
+			Reviewer:   reviewer,
+			Dynamic:    dyn,
+		})),
+		server.WithClusterInfo(clusterinfo.New(clusterinfo.Options{
+			RESTConfig: restCfg,
+			Dynamic:    dyn,
+			Discovery:  disc,
 		})),
 	)
 
