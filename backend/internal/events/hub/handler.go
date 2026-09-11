@@ -161,7 +161,16 @@ func (h *Handler) writeFiltered(ctx context.Context, token string, enc *streamEn
 	if !allowed {
 		return nil
 	}
-	return writeEvent(enc, h.hub.assignID(ev))
+	return writeEvent(enc, h.hub.assignID(ev), shouldFlushEvent(ev))
+}
+
+func shouldFlushEvent(ev Event) bool {
+	switch ev.Type {
+	case TypeEOP, TypeLoaded:
+		return true
+	default:
+		return false
+	}
 }
 
 func marshalEvent(ev Event) ([]byte, error) {
@@ -183,7 +192,7 @@ func marshalEvent(ev Event) ([]byte, error) {
 	}
 }
 
-func writeEvent(enc *streamEncoder, ev Event) error {
+func writeEvent(enc *streamEncoder, ev Event, flush bool) error {
 	body, err := marshalEvent(ev)
 	if err != nil {
 		return err
@@ -191,5 +200,8 @@ func writeEvent(enc *streamEncoder, ev Event) error {
 	if _, err := enc.Write(FormatSSE(ev.ID, body)); err != nil {
 		return err
 	}
-	return enc.Flush()
+	if flush {
+		return enc.Flush()
+	}
+	return nil
 }
