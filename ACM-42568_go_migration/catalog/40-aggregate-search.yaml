@@ -1,7 +1,8 @@
 # Copyright Contributors to the Open Cluster Management project
 #
-# POST /aggregate/{applications,statuses,appSetData} — Go when CONSOLE_INFORMER_CACHE is on (ACM-42600).
-# POST /proxy/search and Search graphql-ws — Go (ACM-42601).
+# POST /aggregate/{applications,statuses,appSetData} — Go when CONSOLE_INFORMER_CACHE is on (ACM-42600);
+# Node sidecar until that migration lands on your branch.
+# POST /proxy/search and the Search WebSocket stay on Node (ACM-42601).
 
 cases:
   - id: aggregate-applications-page
