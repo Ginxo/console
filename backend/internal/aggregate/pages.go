@@ -2,6 +2,8 @@
 
 package aggregate
 
+import "strings"
+
 func (e *Engine) nextAppPageChunk(chunks *[]pageChunk, remoteKey string) *pageChunk {
 	if len(*chunks) == 0 {
 		b := e.cache[remoteKey]
@@ -73,7 +75,7 @@ func (e *Engine) nextAppPageChunk(chunks *[]pageChunk, remoteKey string) *pageCh
 				}
 				reverse := map[byte][]App{}
 				for key, list := range b.ResourceMap {
-					for _, k := range splitComma(key) {
+					for _, k := range strings.Split(key, ",") {
 						if k != "" {
 							reverse[k[0]] = list
 						}
@@ -108,18 +110,6 @@ func joinKeys(keys []string) string {
 	out := keys[0]
 	for i := 1; i < len(keys); i++ {
 		out += "," + keys[i]
-	}
-	return out
-}
-
-func splitComma(s string) []string {
-	var out []string
-	start := 0
-	for i := 0; i <= len(s); i++ {
-		if i == len(s) || s[i] == ',' {
-			out = append(out, s[start:i])
-			start = i + 1
-		}
 	}
 	return out
 }

@@ -192,20 +192,18 @@ func (e *Engine) argoPushModelClusters(resources []map[string]any, local *Cluste
 		localName = local.Name
 	}
 	for _, resource := range resources {
-		isRemote := nestedString(resource, "status", "cluster") != ""
+		clusterHint := nestedString(resource, "status", "cluster")
+		isRemote := clusterHint != ""
+
 		dest := nestedMap(resource, "spec", "destination")
 		destName := strVal(dest["name"])
 		destServer := strVal(dest["server"])
+
 		if (destName == "in-cluster" || destName == localName || isLocalClusterURL(destServer, local)) && !isRemote {
 			set[localName] = struct{}{}
 			continue
 		}
-		clusterHint := nestedString(resource, "status", "cluster")
-		if isRemote {
-			set[e.argoDestinationCluster(dest, managed, clusterHint, localName)] = struct{}{}
-			continue
-		}
-		set[e.argoDestinationCluster(dest, managed, "", localName)] = struct{}{}
+		set[e.argoDestinationCluster(dest, managed, clusterHint, localName)] = struct{}{}
 	}
 	return setKeys(set)
 }

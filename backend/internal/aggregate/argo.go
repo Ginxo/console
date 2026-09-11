@@ -162,7 +162,7 @@ func (e *Engine) remoteArgoApps(remote []map[string]any) []map[string]any {
 		e.ocpArgoFilter[searchStr(argoApp, "name")+"-"+searchStr(argoApp, "destinationNamespace")+"-"+searchStr(argoApp, "cluster")] = struct{}{}
 		hosting := searchStr(argoApp, "_hostingResource")
 		if hosting != "" {
-			parts := splitSlash(hosting)
+			parts := strings.Split(hosting, "/")
 			if len(parts) >= 3 && parts[0] == "ApplicationSet" {
 				appSetName := parts[2]
 				pulled := e.tempPulled[appSetName]
@@ -210,18 +210,6 @@ func (e *Engine) remoteArgoApps(remote []map[string]any) []map[string]any {
 		})
 	}
 	return apps
-}
-
-func splitSlash(s string) []string {
-	var out []string
-	start := 0
-	for i := 0; i <= len(s); i++ {
-		if i == len(s) || s[i] == '/' {
-			out = append(out, s[start:i])
-			start = i + 1
-		}
-	}
-	return out
 }
 
 func (e *Engine) appSetPlacementData(appSet map[string]any, applicationSets []App) []any {
@@ -278,14 +266,14 @@ func (e *Engine) createArgoStatusMap(search searchapi.ResultBucket, clusters []C
 		appCluster := searchStr(app, "cluster")
 		appNamespace = searchStr(app, "namespace")
 		if hosting := searchStr(app, "_hostingResource"); hosting != "" {
-			parts := splitSlash(hosting)
+			parts := strings.Split(hosting, "/")
 			if len(parts) >= 3 {
 				appNamespace, appSetName = parts[1], parts[2]
 				appName = appNamespace + "/" + appSetName
 				appKey = "appset/" + appName
 			}
 		} else if aset := searchStr(app, "applicationSet"); aset != "" {
-			if !containsLabel(searchStr(app, "label"), "apps.open-cluster-management.io/pull-to-ocm-managed-cluster=true") {
+			if !strings.Contains(searchStr(app, "label"), "apps.open-cluster-management.io/pull-to-ocm-managed-cluster=true") {
 				appName = searchStr(app, "namespace") + "/" + aset
 				appKey = "appset/" + appName
 				namePart := searchStr(app, "name")
@@ -339,10 +327,6 @@ func (e *Engine) createArgoStatusMap(search searchapi.ResultBucket, clusters []C
 	}
 	computeDeployedPodStatuses(relatedKinds(search.Related), out, ids, false)
 	return out
-}
-
-func containsLabel(label, needle string) bool {
-	return strings.Contains(label, needle)
 }
 
 type pushEntry struct {
@@ -406,22 +390,13 @@ func mergePushModelPodStatuses(search searchapi.ResultBucket, pushMap map[string
 		statusPtr[entryKey] = matched.appSetKey + "\x00" + matched.targetCluster
 	}
 	for entryKey, plist := range buckets {
-		parts := splitOnce(statusPtr[entryKey], "\x00")
-		if len(parts) != 2 {
+		appSetKey, targetCluster, ok := strings.Cut(statusPtr[entryKey], "\x00")
+		if !ok {
 			continue
 		}
-		st := argo[parts[0]][parts[1]]
+		st := argo[appSetKey][targetCluster]
 		computePodStatus(&st.Deployed, plist)
-		argo[parts[0]][parts[1]] = st
+		argo[appSetKey][targetCluster] = st
 		_ = entryKey
 	}
-}
-
-func splitOnce(s, sep string) []string {
-	for i := 0; i+len(sep) <= len(s); i++ {
-		if s[i:i+len(sep)] == sep {
-			return []string{s[:i], s[i+len(sep):]}
-		}
-	}
-	return []string{s}
 }
