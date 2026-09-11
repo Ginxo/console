@@ -82,7 +82,8 @@ func (c Config) NewHTTPClient(timeout time.Duration) *http.Client {
 		timeout = c.HTTPTimeout
 	}
 	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
+		Proxy:             http.ProxyFromEnvironment,
+		DisableKeepAlives: true, // avoid stale conn after Client.Timeout on slow hub proxies
 		DialContext: (&net.Dialer{
 			Timeout:   15 * time.Second,
 			KeepAlive: 30 * time.Second,

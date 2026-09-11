@@ -98,6 +98,11 @@ func (cfg Config) CaptureSSE(base string, cs Case, path string, timeout time.Dur
 		return Capture{}, nil, err
 	}
 	defer resp.Body.Close()
+	// Unblock readUntilLoaded when the context times out (Read ignores ctx).
+	go func() {
+		<-ctx.Done()
+		_ = resp.Body.Close()
+	}()
 
 	headers := resp.Header.Clone()
 	stream := io.Reader(resp.Body)

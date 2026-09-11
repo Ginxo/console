@@ -12,7 +12,11 @@ if [[ -z "${CONTRACT_TOKEN:-}" ]]; then
   export CONTRACT_TOKEN
 fi
 
-TIMEOUT="${CONTRACT_TIMEOUT:-15m}"
+TIMEOUT="${CONTRACT_TIMEOUT:-30m}"
+# Many catalog cases hit hub proxies; 60s per case with no -test.v looks like a hang.
+export CONTRACT_HTTP_TIMEOUT="${CONTRACT_HTTP_TIMEOUT:-30}"
+export CONTRACT_SSE_TIMEOUT="${CONTRACT_SSE_TIMEOUT:-90}"
+VERBOSE="${CONTRACT_VERBOSE:-1}"
 BIN="${TMPDIR:-/tmp}/acm-42590-contract.test"
 
 preflight() {
@@ -66,6 +70,8 @@ EOF
 
   ping_url="${CONTRACT_BACKEND_URL%/}/ping"
   http_code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 8 "$ping_url" || true)"
+  static_url="${CONTRACT_BACKEND_URL%/}/acm-42590-definitely-missing.json"
+  static_code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 8 "$static_url" || true)"
   if [[ "$http_code" != "200" ]]; then
     cat >&2 <<EOF
 error: backend not reachable at ${CONTRACT_BACKEND_URL} (GET /ping -> ${http_code:-curl-failed})
@@ -80,6 +86,32 @@ and restart npm run plugins.
 EOF
     exit 1
   fi
+  if [[ "$static_code" != "404" ]]; then
+    if [[ "$http_code" != "200" ]]; then
+      cat >&2 <<EOF
+error: backend not reachable at ${CONTRACT_BACKEND_URL} (GET /ping -> ${http_code:-curl-failed})
+
+Start npm run plugins from the repo root, then retry.
+EOF
+      exit 1
+    fi
+    cat >&2 <<EOF
+error: backend appears wedged (GET /acm-42590-definitely-missing.json -> ${static_code:-curl-failed}, want 404)
+
+/ping returned 200 but the static handler did not respond in time. The Go listener is up
+but request handlers are stuck (often after a long catalog run on an old backend binary).
+
+Fix — in the terminal running npm run plugins:
+  1. Ctrl+C
+  2. cd ${ROOT_DIR} && npm run plugins
+  3. Wait for [go] server start, then verify:
+     curl -sk ${static_url} -o /dev/null -w '%{http_code}\\n'
+     (should print 404 within 1s)
+
+To skip this check: CONTRACT_SKIP_PREFLIGHT=1 ./run-catalog.sh
+EOF
+    exit 1
+  fi
 }
 
 echo "Backend: $CONTRACT_BACKEND_URL"
@@ -89,4 +121,17 @@ echo "Building test binary..."
 go test -c -o "$BIN" .
 
 echo "Running full catalog (TestCatalogAgainstBackend)..."
-"$BIN" -test.timeout="$TIMEOUT" -test.run=TestCatalogAgainstBackend
+echo "  HTTP timeout=${CONTRACT_HTTP_TIMEOUT}s SSE timeout=${CONTRACT_SSE_TIMEOUT}s (override with CONTRACT_HTTP_TIMEOUT / CONTRACT_SSE_TIMEOUT)"
+if [[ "$VERBOSE" == "1" ]]; then
+  echo "  Per-case progress enabled (CONTRACT_VERBOSE=0 to hide)"
+fi
+test_args=(-test.timeout="$TIMEOUT" -test.run=TestCatalogAgainstBackend)
+if [[ "$VERBOSE" == "1" ]]; then
+  test_args+=(-test.v)
+fi
+# Line-buffer stdout so per-case -test.v lines appear immediately (otherwise looks stuck).
+if command -v stdbuf >/dev/null 2>&1; then
+  exec stdbuf -oL -eL "$BIN" "${test_args[@]}"
+else
+  exec "$BIN" "${test_args[@]}"
+fi

@@ -44,6 +44,18 @@ func TestCatalogAgainstBackend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if g := os.Getenv("CONTRACT_GROUP"); g != "" {
+		filtered := make([]Case, 0, len(cases))
+		for _, cs := range cases {
+			if cs.Group == g {
+				filtered = append(filtered, cs)
+			}
+		}
+		cases = filtered
+		if len(cases) == 0 {
+			t.Fatalf("CONTRACT_GROUP=%q matched no cases", g)
+		}
+	}
 	watched := WatchedKindSet(resources)
 	t.Logf("backend=%s cases=%d mode=%s", cfg.BackendURL, len(cases), cfg.Mode)
 
@@ -62,6 +74,7 @@ func TestCatalogAgainstBackend(t *testing.T) {
 				name += "/multicloud"
 			}
 			t.Run(name, func(t *testing.T) {
+				t.Logf("→ %s %s %s", cs.Method, p, cs.Kind)
 				runCase(t, cfg, cs, p, watched, name)
 			})
 		}

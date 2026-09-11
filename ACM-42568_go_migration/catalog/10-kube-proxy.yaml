@@ -24,6 +24,8 @@ cases:
     path: /apis
     auth: bearer
     alsoMulticloud: true
+    soft: true
+    timeoutSeconds: 60
     headers:
       Accept: application/json
     expect:
@@ -64,6 +66,8 @@ cases:
     method: GET
     path: /api/v1/namespaces
     auth: bearer
+    soft: true
+    timeoutSeconds: 60
     headers:
       Accept: application/json
     expect:

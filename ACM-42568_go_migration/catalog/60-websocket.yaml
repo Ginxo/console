@@ -3,7 +3,7 @@ cases:
   - id: search-websocket
     group: websocket
     kind: websocket
-    description: WebSocket upgrade /multicloud/proxy/search (Node only registers the prefixed upgrade)
+    description: WebSocket upgrade /multicloud/proxy/search (Go searchproxy graphql-ws relay)
     method: GET
     path: /multicloud/proxy/search
     auth: bearer

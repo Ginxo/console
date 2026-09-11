@@ -1,4 +1,5 @@
-# Copyright Contributors to the Open Cluster Management project
+# Long-tail HTTP (served by Go: backend/internal/{ansibletower,placementdebug,upgraderisks,rosa}).
+# Keep cases soft when Insights/OCM/placement upstreams are absent. Do not hard-fail without those services.
 cases:
   - id: ansibletower-bad-json
     group: long-tail

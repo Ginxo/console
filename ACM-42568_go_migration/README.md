@@ -28,7 +28,7 @@ Quick check: `curl -sk https://localhost:4000/ping` → `200`.
 
 At the end: colored summary — **Executed**, **OK** (green), **SOFT** (yellow), **FAIL** (red). **FAIL must be 0** for a green gate. **SOFT** skips are optional upstreams missing on your hub (normal on dev).
 
-`./run-catalog.sh` shows the summary without every subtest line. Use `go test -v` for per-case detail. `NO_COLOR=1` disables colors.
+`./run-catalog.sh` prints per-case progress by default (`CONTRACT_VERBOSE=1`). A full run can take several minutes when hub proxies time out (30s per slow case). Set `CONTRACT_VERBOSE=0` for summary-only output. `NO_COLOR=1` disables colors.
 
 ## Prerequisites
 
@@ -42,6 +42,20 @@ At the end: colored summary — **Executed**, **OK** (green), **SOFT** (yellow),
 ### Plugin UI redirects to `/dashboards`
 
 `oc whoami --show-server` must match `CLUSTER_API_URL` in `backend/.env`. After `oc login` to a new hub, run `npm run setup:hub` and restart `npm run plugins`. The OpenShift Console plugin proxy on :9000 sends your token with `authorize: true`; a hub mismatch 401s authenticated routes and the frontend logs out.
+
+### `./run-catalog.sh` appears stuck (no output for minutes)
+
+The script runs **~118 HTTP checks** sequentially. Without per-case output it looks frozen. As of the latest `run-catalog.sh`, progress lines print by default (`CONTRACT_VERBOSE=1`). A full run can still take **10–20+ minutes** when hub proxies or aggregate search hit their per-case timeout (30–60s each).
+
+```bash
+# Subset while working on long-tail (ACM-42602):
+CONTRACT_GROUP=long-tail ./run-catalog.sh
+
+# Faster timeouts (more SOFT skips on a slow hub):
+CONTRACT_HTTP_TIMEOUT=20 ./run-catalog.sh
+```
+
+If **every** case hits `context deadline exceeded`, restart `npm run plugins` so Go serves the migrated routes (long-tail no longer lives on the Node sidecar). Confirm `curl -sk https://localhost:4000/ping` → `200` and `oc whoami -t` is non-empty.
 
 ### `tls: first record does not look like a TLS handshake`
 
@@ -67,6 +81,8 @@ cd ACM-42568_go_migration
 ```
 
 The test **skips** (not fail) when `GET /debug/informer-snapshot` is missing (Go cache not wired yet). After ACM-42597:
+
+Go informers start **after** `:4000` is bound. `CONSOLE_INFORMER_CACHE=0` disables them. After sync, the Go process logs `informer cache memory` with `heapAlloc` — compare that to the sidecar `INFO:memory` `eventCache` size, not combined RSS. The Go store is uncompressed `unstructured` (managedFields stripped except Policy).
 
 | Variable | Purpose |
 |----------|---------|
