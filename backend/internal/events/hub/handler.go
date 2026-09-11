@@ -122,7 +122,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c := h.hub.subscribe()
 	defer h.hub.unsubscribe(c)
 
-	for _, ev := range h.hub.snapshotEvents() {
+	events := h.hub.snapshotEvents()
+	h.access.Prefetch(r.Context(), token, events)
+	for _, ev := range events {
 		if err := h.writeFiltered(r.Context(), token, enc, ev); err != nil {
 			return
 		}
