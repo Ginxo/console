@@ -78,6 +78,7 @@ func Load() *Config {
 		OIDCIssuerURL:              os.Getenv("OIDC_ISSUER_URL"),
 		FrontendURL:                os.Getenv("FRONTEND_URL"),
 		Production:                 os.Getenv("NODE_ENV") == "production",
+		DisableEvents:              os.Getenv("DISABLE_EVENTS"),
 		settings:                   map[string]string{},
 	}
 	_ = cfg.ReloadSettings()
