@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-readonly GOLANGCI_LINT_VERSION=v1.64.8
+readonly GOLANGCI_LINT_VERSION=v2.13.2
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ! command -v go >/dev/null 2>&1; then
@@ -12,7 +12,7 @@ if ! command -v go >/dev/null 2>&1; then
 fi
 
 if ! command -v golangci-lint >/dev/null 2>&1; then
-	go install "github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
+	go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
 fi
 
 export PATH="$(go env GOPATH)/bin:${PATH}"
