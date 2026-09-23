@@ -24,6 +24,8 @@ type Engine struct {
 
 	// PreLimit is PREPROCESS_BREAKPOINT (500). Set 0 in tests to always preprocess.
 	PreLimit *int
+	// retryWait overrides the 5m MultiClusterHub / Search-API retry delay. Tests set a short value.
+	retryWait time.Duration
 
 	mu                sync.RWMutex
 	cache             map[string]*cacheBucket
@@ -128,13 +130,45 @@ func (e *Engine) discoverPrefixes(ctx context.Context) {
 	e.mu.Unlock()
 }
 
+func (e *Engine) retryWaitOrDefault() time.Duration {
+	if e.retryWait > 0 {
+		return e.retryWait
+	}
+	return 5 * time.Minute
+}
+
+func (e *Engine) wait(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
+	}
+}
+
 func (e *Engine) searchLoop(ctx context.Context) {
 	pass := 1
 	searchAPIMissing := false
+	multiClusterHubMissing := false
 	for {
 		if ctx.Err() != nil {
 			return
 		}
+		if !hubresources.MCHPresent(ctx, e.Dynamic) {
+			if !multiClusterHubMissing {
+				applog.Logger().Info("MultiClusterHub not found; waiting before search aggregation")
+				multiClusterHubMissing = true
+			}
+			if !e.wait(ctx, e.retryWaitOrDefault()) {
+				return
+			}
+			continue
+		}
+		if multiClusterHubMissing {
+			applog.Logger().Info("MultiClusterHub found")
+			multiClusterHubMissing = false
+		}
+
 		if e.Search != nil {
 			for {
 				ok, err := e.Search.Ping(ctx)
@@ -143,10 +177,8 @@ func (e *Engine) searchLoop(ctx context.Context) {
 						applog.Logger().Error("search API missing")
 						searchAPIMissing = true
 					}
-					select {
-					case <-ctx.Done():
+					if !e.wait(ctx, e.retryWaitOrDefault()) {
 						return
-					case <-time.After(5 * time.Minute):
 					}
 					continue
 				}
@@ -168,10 +200,8 @@ func (e *Engine) searchLoop(ctx context.Context) {
 		if pass > firstPassesFastInterval {
 			wait = e.searchInterval()
 		}
-		select {
-		case <-ctx.Done():
+		if !e.wait(ctx, wait) {
 			return
-		case <-time.After(wait):
 		}
 	}
 }
