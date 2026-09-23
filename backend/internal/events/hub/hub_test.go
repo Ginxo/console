@@ -12,6 +12,13 @@ import (
 	"github.com/stolostron/console/backend/internal/informers"
 )
 
+func TestNewInitializesFlap(t *testing.T) {
+	h := New(nil, nil)
+	if h.flap == nil {
+		t.Fatal("New must initialize flap tracker")
+	}
+}
+
 func TestOnResourceFansModifiedThenLoaded(t *testing.T) {
 	h := New(nil, nil)
 	c := h.subscribe()
@@ -22,6 +29,91 @@ func TestOnResourceFansModifiedThenLoaded(t *testing.T) {
 		Object: &unstructured.Unstructured{Object: map[string]any{
 			"kind": "Namespace", "apiVersion": "v1",
 			"metadata": map[string]any{"name": "default"},
+		}},
+	})
+	ev1 := recv(t, c.ch)
+	ev2 := recv(t, c.ch)
+	if ev1.Type != TypeModified || ev2.Type != TypeLoaded {
+		t.Fatalf("%s then %s", ev1.Type, ev2.Type)
+	}
+}
+
+func TestOnResourceSkipsThrottledPolicy(t *testing.T) {
+	h := New(nil, nil)
+	h.flap = newFlapState(testFlapConfig())
+	c := h.subscribe()
+	defer h.unsubscribe(c)
+
+	at := time.Unix(1_700_000_000, 0)
+	throttlePolicyAt(h.flap, "flappy", "default", at)
+	h.flap.now = func() time.Time { return at.Add(100 * time.Millisecond) }
+	h.OnResource(informers.ResourceEvent{
+		Type:   informers.EventModified,
+		Object: &unstructured.Unstructured{Object: policyWithCompliant("flappy", "default", 100)},
+	})
+	select {
+	case ev := <-c.ch:
+		t.Fatalf("unexpected event %+v", ev)
+	default:
+	}
+}
+
+func TestOnResourceFansPolicyWhenCooldownAllows(t *testing.T) {
+	h := New(nil, nil)
+	h.flap = newFlapState(testFlapConfig())
+	c := h.subscribe()
+	defer h.unsubscribe(c)
+
+	at := time.Unix(1_700_000_000, 0)
+	throttlePolicyAt(h.flap, "periodic", "default", at)
+	h.flap.now = func() time.Time { return at.Add(h.flap.cfg.cooldown) }
+	h.OnResource(informers.ResourceEvent{
+		Type:   informers.EventModified,
+		Object: &unstructured.Unstructured{Object: policyWithCompliant("periodic", "default", 50)},
+	})
+	ev1 := recv(t, c.ch)
+	ev2 := recv(t, c.ch)
+	if ev1.Type != TypeModified {
+		t.Fatalf("expected MODIFIED got %s", ev1.Type)
+	}
+	if ev2.Type != TypeLoaded {
+		t.Fatalf("expected LOADED got %s", ev2.Type)
+	}
+}
+
+func TestOnResourceFansDeletedDespiteThrottle(t *testing.T) {
+	h := New(nil, nil)
+	h.flap = newFlapState(testFlapConfig())
+	c := h.subscribe()
+	defer h.unsubscribe(c)
+
+	at := time.Unix(1_700_000_000, 0)
+	throttlePolicyAt(h.flap, "gone", "default", at)
+	h.flap.now = func() time.Time { return at.Add(100 * time.Millisecond) }
+	h.OnResource(informers.ResourceEvent{
+		Type: informers.EventDeleted,
+		Object: &unstructured.Unstructured{Object: map[string]any{
+			"kind": policyKind, "apiVersion": "policy.open-cluster-management.io/v1",
+			"metadata": map[string]any{"name": "gone", "namespace": "default"},
+		}},
+	})
+	ev1 := recv(t, c.ch)
+	ev2 := recv(t, c.ch)
+	if ev1.Type != TypeDeleted || ev2.Type != TypeLoaded {
+		t.Fatalf("%s then %s", ev1.Type, ev2.Type)
+	}
+}
+
+func TestOnResourceFansWhenFlapNil(t *testing.T) {
+	h := New(nil, nil)
+	h.flap = nil
+	c := h.subscribe()
+	defer h.unsubscribe(c)
+	h.OnResource(informers.ResourceEvent{
+		Type: informers.EventModified,
+		Object: &unstructured.Unstructured{Object: map[string]any{
+			"kind": policyKind, "apiVersion": "policy.open-cluster-management.io/v1",
+			"metadata": map[string]any{"name": "p", "namespace": "ns"},
 		}},
 	})
 	ev1 := recv(t, c.ch)

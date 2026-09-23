@@ -6,6 +6,8 @@ import (
 	"context"
 	"sort"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/stolostron/console/backend/internal/informers"
 	applog "github.com/stolostron/console/backend/internal/log"
 )
@@ -99,6 +101,7 @@ func (h *Hub) snapshotEvents() []Event {
 	if h.cache != nil {
 		objs = h.cache.ListForwarded()
 	}
+	h.applyFlapOverlay(objs)
 	return snapshotFromObjects(h.settings(), objs)
 }
 
@@ -166,5 +169,26 @@ func (h *Handler) authorizedSnapshot(ctx context.Context, token string) []Event 
 	if h.hub != nil {
 		settings = h.hub.settings()
 	}
-	return snapshotFromObjects(settings, authorizeRefs(ctx, token, h.access, refs))
+	objs := authorizeRefs(ctx, token, h.access, refs)
+	if h.hub != nil {
+		h.hub.applyFlapOverlay(objs)
+	}
+	return snapshotFromObjects(settings, objs)
+}
+
+func (h *Hub) applyFlapOverlay(objs []informers.ForwardedObject) {
+	if h == nil || h.flap == nil {
+		return
+	}
+	for i := range objs {
+		kind := objs[i].Object.GetKind()
+		if kind != policyKind {
+			continue
+		}
+		ov, ok := h.flap.overlay(kind, objs[i].Object.GetNamespace(), objs[i].Object.GetName())
+		if !ok {
+			continue
+		}
+		objs[i].Object = unstructured.Unstructured{Object: ov}
+	}
 }
