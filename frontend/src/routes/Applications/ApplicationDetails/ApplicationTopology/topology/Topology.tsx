@@ -82,6 +82,7 @@ export interface TopologyProps {
   onRefreshResources?: () => void
   onEditAppSet?: (node: TopologyNode) => void
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
+  onEditApplications?: (node: TopologyNode) => void
   onViewLogs?: (node: TopologyNode) => void
   onSyncResources?: (node: TopologyNode) => void
   onLaunchArgo?: (node: TopologyNode) => void
@@ -171,6 +172,10 @@ const TopologyContent: React.FC<TopologyContentProps> = ({
   const alertsKeyAtProcessingStartRef = useRef<string>()
   const prevIsProcessingSaveRef = useRef(false)
 
+  const isCreatingProgressing = elements.nodes.some(
+    (node: TopologyNode) => node.type === 'applicationset' && Boolean(node.specs?.isCreatingProgressing)
+  )
+
   useEffect(() => {
     if (isProcessingSave && !prevIsProcessingSaveRef.current) {
       alertsKeyAtProcessingStartRef.current = alertsTitlesKey
@@ -212,7 +217,7 @@ const TopologyContent: React.FC<TopologyContentProps> = ({
     return () => clearTimeout(timer)
   }, [isProcessingSave, processingSaveStart, onClearProcessingSave])
 
-  const showAlerts = (alerts && alerts.length > 0) || isProcessingSave || isAnalyzing
+  const showAlerts = (alerts && alerts.length > 0) || isProcessingSave || isAnalyzing || isCreatingProgressing
 
   return (
     <TopologyView
@@ -244,6 +249,7 @@ const TopologyContent: React.FC<TopologyContentProps> = ({
             currentAlertsKey={currentAlertsKey ?? '[]'}
             isAnalyzing={isAnalyzing}
             isProcessingSave={isProcessingSave}
+            isCreatingProgressing={isCreatingProgressing}
             onEditAppSet={onEditAppSet}
             onEditYaml={onEditYaml}
             onViewLogs={onViewLogs}
@@ -277,11 +283,20 @@ export const Topology = ({
   hubClusterName,
   onEditAppSet,
   onEditYaml,
+  onEditApplications,
   onViewLogs,
   onSyncResources,
   onLaunchArgo,
 }: TopologyProps) => {
-  const topologyRefreshValue = useMemo(() => ({ refreshResources: onRefreshResources }), [onRefreshResources])
+  const topologyRefreshValue = useMemo(
+    () => ({
+      refreshResources: onRefreshResources,
+      onViewLogs,
+      onEditYaml,
+      onEditApplications,
+    }),
+    [onRefreshResources, onViewLogs, onEditYaml, onEditApplications]
+  )
   const controllerRef = useRef<Controller>()
   let controller = controllerRef.current
   if (!controller) {
