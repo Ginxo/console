@@ -108,6 +108,8 @@ import {
   SubscriptionOperatorKind,
   ClusterExtensionApiVersion,
   ClusterExtensionKind,
+  ClusterRoleKind,
+  RbacApiVersion,
   SubscriptionReportApiVersion,
   SubscriptionReportKind,
   UserApiVersion,
@@ -181,6 +183,7 @@ import {
   subscriptionReportsState,
   subscriptionsState,
   usersState,
+  vmClusterRolesState,
   WatchEvent,
 } from '../atoms'
 import { applyWatchEventsToCache, groupWatchEventsByKind } from '../hooks/applyWatchEventsToCache'
@@ -258,6 +261,7 @@ export function LoadEventsData() {
   const setSubscriptionReportsState = useSetRecoilState(subscriptionReportsState)
   const setSubscriptionsState = useSetRecoilState(subscriptionsState)
   const setUsers = useSetRecoilState(usersState)
+  const setVMClusterRoles = useSetRecoilState(vmClusterRolesState)
 
   const { setters, mappers, caches } = useMemo(() => {
     const setters: Record<string, Record<string, SetterOrUpdater<any[]>>> = {}
@@ -343,6 +347,7 @@ export function LoadEventsData() {
     addSetter(PolicyAutomationApiVersion, PolicyAutomationKind, setPolicyAutomationState)
     addSetter(PolicyReportApiVersion, PolicyReportKind, setPolicyReports)
     addSetter(PolicySetApiVersion, PolicySetKind, setPolicySetsState)
+    addSetter(RbacApiVersion, ClusterRoleKind, setVMClusterRoles)
     addSetter(SearchOperatorApiVersion, SearchOperatorKind, setSearchOperator)
     addSetter(SecretApiVersion, SecretKind, setSecrets)
     addSetter(ServiceApiVersion, ServiceKind, setServices)
@@ -413,6 +418,7 @@ export function LoadEventsData() {
     setSubscriptionReportsState,
     setSubscriptionsState,
     setUsers,
+    setVMClusterRoles,
   ])
 
   const applyWatchEvents = useCallback(
