@@ -1,7 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { RecoilRoot } from 'recoil'
 import { axe } from 'jest-axe'
 import type { TopologyNode } from '~/routes/Applications/ApplicationDetails/ApplicationTopology/types'
@@ -41,13 +40,15 @@ jest.mock('@patternfly/react-log-viewer', () => ({
     toolbar,
     header,
     footer,
+    height,
   }: {
     data: string
     toolbar: React.ReactNode
     header: React.ReactNode
     footer: React.ReactNode
+    height?: string
   }) => (
-    <div id="log-viewer">
+    <div id="log-viewer" data-height={height}>
       {toolbar}
       {header}
       <pre>{data}</pre>
@@ -56,13 +57,45 @@ jest.mock('@patternfly/react-log-viewer', () => ({
   ),
 }))
 
-jest.mock('screenfull', () => ({
-  isEnabled: true,
-  isFullscreen: false,
-  on: jest.fn(),
-  off: jest.fn(),
-  toggle: jest.fn(),
-}))
+jest.mock('screenfull', () => {
+  const state = {
+    isFullscreen: false,
+    changeHandler: undefined as (() => void) | undefined,
+  }
+  return {
+    isEnabled: true,
+    get isFullscreen() {
+      return state.isFullscreen
+    },
+    set isFullscreen(value: boolean) {
+      state.isFullscreen = value
+    },
+    on: jest.fn((event: string, handler: () => void) => {
+      if (event === 'change') {
+        state.changeHandler = handler
+      }
+    }),
+    off: jest.fn(),
+    toggle: jest.fn(() => {
+      state.isFullscreen = !state.isFullscreen
+      state.changeHandler?.()
+    }),
+    __reset() {
+      state.isFullscreen = false
+      state.changeHandler = undefined
+    },
+  }
+})
+
+import screenfull from 'screenfull'
+import { clickElement } from '~/lib/test-util'
+
+type MockScreenfull = typeof screenfull & {
+  __reset: () => void
+  toggle: jest.Mock
+}
+
+const mockScreenfull = screenfull as MockScreenfull
 
 jest.mock('~/routes/Search/Details/LogsPage', () => ({
   LogsHeader: ({ cluster, namespace }: { cluster: string; namespace: string }) => (
@@ -73,11 +106,15 @@ jest.mock('~/routes/Search/Details/LogsPage', () => ({
     setContainer,
     setPreviousLogs,
     previousLogs,
+    toggleFullscreen,
+    isFullscreen,
   }: {
     containers: string[]
     setContainer: (c: string) => void
     setPreviousLogs: (v: boolean) => void
     previousLogs: boolean
+    toggleFullscreen: () => void
+    isFullscreen: boolean
   }) => (
     <div id="logs-toolbar">
       {containers.map((container) => (
@@ -87,6 +124,9 @@ jest.mock('~/routes/Search/Details/LogsPage', () => ({
       ))}
       <button type="button" onClick={() => setPreviousLogs(!previousLogs)}>
         toggle-previous
+      </button>
+      <button type="button" onClick={toggleFullscreen}>
+        {isFullscreen ? 'Collapse' : 'Expand'}
       </button>
     </div>
   ),
@@ -140,6 +180,7 @@ describe('LogsModal', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     sessionStorage.clear()
+    mockScreenfull.__reset()
     mockFetchRetry.mockResolvedValue({ data: 'hub log line\n' })
     mockFleetLogsRequest.mockResolvedValue({ data: 'fleet log line\n' })
   })
@@ -175,7 +216,7 @@ describe('LogsModal', () => {
     expect(await screen.findByText('hub log line')).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await clickElement(screen.getByRole('button', { name: 'Close' }))
     expect(close).toHaveBeenCalled()
   })
 
@@ -183,7 +224,7 @@ describe('LogsModal', () => {
     const { processActionLink } = renderLogsModal()
     await screen.findByText('hub log line')
 
-    await userEvent.click(screen.getByRole('button', { name: 'View logs in Search details' }))
+    await clickElement(screen.getByRole('button', { name: 'View logs in Search details' }))
     expect(processActionLink).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'open_link',
@@ -199,7 +240,7 @@ describe('LogsModal', () => {
     renderLogsModal()
     await screen.findByText('hub log line')
 
-    await userEvent.click(screen.getByText('pod-b'))
+    await clickElement(screen.getByText('pod-b'))
 
     await waitFor(() => expect(mockFleetLogsRequest).toHaveBeenCalled())
     expect(await screen.findByText('fleet log line')).toBeInTheDocument()
@@ -241,5 +282,27 @@ describe('LogsModal', () => {
     }
     renderLogsModal(managedOnly)
     expect(await screen.findByText('fleet failed')).toBeInTheDocument()
+  })
+
+  it('expands LogViewer to full height when entering fullscreen (ACM-45133)', async () => {
+    renderLogsModal()
+    await screen.findByText('hub log line')
+
+    const logViewer = screen.getByTestId('log-viewer')
+    expect(logViewer).toHaveAttribute('data-height', 'calc(70vh - 200px)')
+    expect(logViewer.parentElement).toHaveStyle({ flex: '1', minHeight: '0' })
+
+    await clickElement(screen.getByRole('button', { name: 'Expand' }))
+
+    await waitFor(() => {
+      expect(mockScreenfull.toggle).toHaveBeenCalled()
+      expect(screen.getByTestId('log-viewer')).toHaveAttribute('data-height', '100%')
+      expect(screen.getByTestId('log-viewer').parentElement).toHaveStyle({
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      })
+      expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument()
+    })
   })
 })

@@ -275,8 +275,8 @@ export default function LogsPage() {
   const { kind, resource, resourceError, containers, cluster, namespace, name, isHubClusterResource } =
     useSearchDetailsContext()
   const { search } = useLocation()
-  const logViewerRef = useRef<any>()
-  const resourceLogRef = useRef<any>()
+  const logViewerRef = useRef<any>(undefined)
+  const resourceLogRef = useRef<any>(undefined)
   const { t } = useTranslation()
   const [isLoadingLogs, setIsLoadingLogs] = useState<boolean>(false)
   const [logs, setLogs] = useState<string>('')
@@ -461,8 +461,7 @@ export default function LogsPage() {
       <div ref={resourceLogRef} style={{ height: '100%' }}>
         <LogViewer
           ref={logViewerRef}
-          // height={'100%'}
-          height={'450px'}
+          height={isFullscreen ? '100%' : '450px'}
           data={logs}
           theme="dark"
           isTextWrapped={wrapLines}

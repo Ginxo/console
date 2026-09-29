@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { ReactNode, type RefObject } from 'react'
+import { ReactNode, type RefObject, type JSX } from 'react'
 import { CodeEditorControl } from '@patternfly/react-code-editor'
 import {
   RedoIcon,
@@ -87,7 +87,9 @@ export function SyncEditorToolbar(props: Readonly<SyncEditorToolbarProps>): JSX.
 
   return (
     <div className="sy-toolbar-row">
-      <div className="sy-c-code-editor__title">{editorTitle || 'YAML'}</div>
+      <div className="sy-c-code-editor__title" title={editorTitle || 'YAML'}>
+        {editorTitle || 'YAML'}
+      </div>
       <div className="sy-toolbar-buttons">
         {showCompareButton && (
           <div className="sy-toolbar-compare-group">

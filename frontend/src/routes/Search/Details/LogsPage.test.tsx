@@ -2,23 +2,21 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import React, { useRef, useState } from 'react'
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router'
 import { RecoilRoot } from 'recoil'
 import { managedClustersState } from '../../../atoms'
 import { nockOff, nockIgnoreRBAC, nockIgnoreApiPaths } from '../../../lib/nock-util'
-import { waitForNocks } from '../../../lib/test-util'
+import { waitForNocks, clickElement } from '~/lib/test-util'
 import { ManagedCluster, ManagedClusterApiVersion, ManagedClusterKind } from '../../../resources'
 import { SearchDetailsContext } from './DetailsPage'
 import LogsPage, { LogsFooterButton, LogsHeader, LogsToolbar } from './LogsPage'
 
-// TODO why does the react-log-viewer not work with testing-library render...
 jest.mock('@patternfly/react-log-viewer', () => ({
   __esModule: true,
-  LogViewer: () => {
+  LogViewer: ({ height }: { height?: string }) => {
     return (
-      <div>
+      <div id="log-viewer" data-height={height}>
         <div>
           <p>{'Cluster:'}</p>
           {'testCluster'}
@@ -36,11 +34,48 @@ jest.mock('@patternfly/react-log-viewer', () => ({
   },
 }))
 
-jest.mock('screenfull', () => ({
-  isEnabled: true,
-  on: () => {},
-  off: () => {},
-}))
+jest.mock('screenfull', () => {
+  const state = {
+    isFullscreen: false,
+    changeHandler: undefined as (() => void) | undefined,
+  }
+  return {
+    isEnabled: true,
+    get isFullscreen() {
+      return state.isFullscreen
+    },
+    set isFullscreen(value: boolean) {
+      state.isFullscreen = value
+    },
+    on: jest.fn((event: string, handler: () => void) => {
+      if (event === 'change') {
+        state.changeHandler = handler
+      }
+    }),
+    off: jest.fn(),
+    toggle: jest.fn(() => {
+      state.isFullscreen = !state.isFullscreen
+      state.changeHandler?.()
+    }),
+    __reset() {
+      state.isFullscreen = false
+      state.changeHandler = undefined
+    },
+    __setFullscreen(value: boolean) {
+      state.isFullscreen = value
+      state.changeHandler?.()
+    },
+  }
+})
+
+import screenfull from 'screenfull'
+
+type MockScreenfull = typeof screenfull & {
+  __reset: () => void
+  __setFullscreen: (value: boolean) => void
+}
+
+const mockScreenfull = screenfull as MockScreenfull
 
 URL.createObjectURL = jest.fn(() => '/test/url')
 
@@ -369,6 +404,8 @@ describe('LogsPage', () => {
   beforeEach(async () => {
     nockIgnoreRBAC()
     nockIgnoreApiPaths()
+    mockScreenfull.__reset()
+    jest.clearAllMocks()
   })
 
   it('should correctly render resource error if pod is no longer found', async () => {
@@ -529,6 +566,34 @@ describe('LogsPage', () => {
     await waitFor(() => expect(screen.getByText('testLogs')).toBeInTheDocument())
   })
 
+  it('should expand LogViewer to full height when entering fullscreen (ACM-45133)', async () => {
+    const localClusterLogs = nockOff(
+      '/api/v1/namespaces/testNamespace/pods/testName/log?container=testContainer&tailLines=1000',
+      'testLogs',
+      200
+    )
+
+    render(
+      <RecoilRoot>
+        <MemoryRouter>
+          <Routes>
+            <Route element={<Outlet context={localClusterSearchDetailsContext} />}>
+              <Route path="*" element={<LogsPage />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </RecoilRoot>
+    )
+
+    await waitForNocks([localClusterLogs])
+    await waitFor(() => expect(screen.getByText('testLogs')).toBeInTheDocument())
+    expect(screen.getByTestId('log-viewer')).toHaveAttribute('data-height', '450px')
+
+    mockScreenfull.__setFullscreen(true)
+
+    await waitFor(() => expect(screen.getByTestId('log-viewer')).toHaveAttribute('data-height', '100%'))
+  })
+
   it('should render logs toolbar & click wrap lines and raw buttons', async () => {
     jest.mock('react', () => ({
       useContext: jest.fn(),
@@ -590,13 +655,13 @@ describe('LogsPage', () => {
     // Should toggle wrap lines
     const wrapLinesBtn = screen.getByText(/wrap lines/i)
     await waitFor(() => expect(wrapLinesBtn).toBeInTheDocument())
-    userEvent.click(wrapLinesBtn)
+    await clickElement(wrapLinesBtn)
 
     const rawBtn = screen.getByRole('button', {
       name: /raw/i,
     })
     await waitFor(() => expect(rawBtn).toBeInTheDocument())
-    userEvent.click(rawBtn)
+    await clickElement(rawBtn)
     expect(window.open).toHaveBeenCalledWith('about:blank')
     expect(mockRawWindow.document.createElement).toHaveBeenCalledWith('pre')
     expect(mockPre.textContent).toBe('testLogs')
@@ -604,7 +669,7 @@ describe('LogsPage', () => {
 
     const containerBtn = screen.getByText(/testcontainer/i)
     await waitFor(() => expect(containerBtn).toBeInTheDocument())
-    userEvent.click(containerBtn)
+    await clickElement(containerBtn)
     await waitFor(() => expect(screen.getByText(/testcontainer1/i)).toBeInTheDocument())
     screen.getByText(/testcontainer1/i).click()
   })
@@ -671,7 +736,7 @@ describe('LogsPage', () => {
 
   it('should render footer correctly', async () => {
     const Footer = () => {
-      const logViewerRef = useRef<any>()
+      const logViewerRef = useRef<any>(undefined)
       const [showJumpToBottomBtn, setShowJumpToBottomBtn] = useState<boolean>(true)
       return (
         <RecoilRoot>
@@ -687,7 +752,7 @@ describe('LogsPage', () => {
 
     const footerBtn = screen.getByText('Jump to the bottom')
     await waitFor(() => expect(footerBtn).toHaveStyle('visibility: visible'))
-    userEvent.click(footerBtn)
+    await clickElement(footerBtn)
     await waitFor(() => expect(footerBtn).toHaveStyle('visibility: hidden'))
   })
 })
