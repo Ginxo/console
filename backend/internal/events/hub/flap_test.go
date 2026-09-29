@@ -143,3 +143,94 @@ func TestCheckThrottleStatusRecoversAfterCooldown(t *testing.T) {
 		t.Fatal("expected lastCached reset")
 	}
 }
+
+func replicatedFlappingPolicy(rootNS, rootName, cluster string) map[string]any {
+	return map[string]any{
+		"kind":       policyKind,
+		"apiVersion": "policy.open-cluster-management.io/v1",
+		"metadata": map[string]any{
+			"name":      rootNS + "." + rootName,
+			"namespace": cluster,
+			"uid":       cluster + "-" + rootName,
+			"labels": map[string]any{
+				rootPolicyLabel:  rootNS + "." + rootName,
+				clusterNameLabel: cluster,
+			},
+		},
+		"status": map[string]any{
+			"compliant": "Compliant",
+			"details": []any{
+				map[string]any{
+					"compliant": "Compliant",
+					"history": []any{
+						map[string]any{"message": "Compliant; notification - configmaps [kike-flap-cm] was updated successfully"},
+						map[string]any{"message": "NonCompliant; violation - configmaps [kike-flap-cm] found but not as specified"},
+					},
+				},
+			},
+		},
+	}
+}
+
+func rootPolicy(namespace, name, cluster, compliant string) map[string]any {
+	return map[string]any{
+		"kind":       policyKind,
+		"apiVersion": "policy.open-cluster-management.io/v1",
+		"metadata":   map[string]any{"name": name, "namespace": namespace, "uid": namespace + "-" + name},
+		"status": map[string]any{
+			"compliant": compliant,
+			"status": []any{
+				map[string]any{"clustername": cluster, "clusternamespace": cluster, "compliant": compliant},
+			},
+		},
+	}
+}
+
+func TestThrottledPolicyKeepsRecentViolation(t *testing.T) {
+	s := newFlapState(testFlapConfig())
+	at := time.Unix(1_700_000_000, 0)
+	obj := replicatedFlappingPolicy("default", "kike-foo", "weekly")
+	s.shouldThrottle(obj, at.Add(-s.cfg.settling-time.Second), schema.GroupVersionResource{})
+	now := at
+	var suppressed bool
+	for i := 0; i < s.cfg.threshold+1; i++ {
+		obj = replicatedFlappingPolicy("default", "kike-foo", "weekly")
+		suppressed = s.shouldThrottle(obj, now, schema.GroupVersionResource{})
+		now = now.Add(time.Millisecond)
+	}
+	if suppressed {
+		t.Fatal("crossing the threshold should publish the violation")
+	}
+	status, _ := obj["status"].(map[string]any)
+	if obj["throttled"] != true || status["compliant"] != "NonCompliant" {
+		t.Fatalf("published object = %#v", obj["status"])
+	}
+
+	follow := replicatedFlappingPolicy("default", "kike-foo", "weekly")
+	if !s.shouldThrottle(follow, now, schema.GroupVersionResource{}) {
+		t.Fatal("expected the compliant follow-up to be suppressed")
+	}
+	next, ok := s.clientPolicy("weekly", "default.kike-foo", follow)
+	if !ok {
+		t.Fatal("expected throttled snapshot")
+	}
+	nextStatus, _ := next["status"].(map[string]any)
+	if next["throttled"] != true || nextStatus["compliant"] != "NonCompliant" {
+		t.Fatalf("snapshot lost the violation: %#v", nextStatus)
+	}
+
+	rootLive := rootPolicy("default", "kike-foo", "weekly", "Compliant")
+	rootNext, ok := s.clientPolicy("default", "kike-foo", rootLive)
+	if !ok {
+		t.Fatal("expected root projection")
+	}
+	rootStatus, _ := rootNext["status"].(map[string]any)
+	if rootStatus["compliant"] != "NonCompliant" {
+		t.Fatalf("root compliant = %v", rootStatus["compliant"])
+	}
+	clusters, _ := rootStatus["status"].([]any)
+	cluster, _ := clusters[0].(map[string]any)
+	if cluster["clustername"] != "weekly" || cluster["compliant"] != "NonCompliant" {
+		t.Fatalf("cluster status = %#v", cluster)
+	}
+}

@@ -123,10 +123,22 @@ func (h *Hub) OnResource(ev informers.ResourceEvent) {
 	if ev.Object != nil && ev.Object.Object != nil {
 		obj = ev.Object.Object
 	}
-	if ev.Type == informers.EventModified && h.flap != nil && h.flap.shouldThrottle(obj, h.flap.clock(), ev.GVR) {
-		return
+	suppress := false
+	if ev.Type == informers.EventModified && h.flap != nil {
+		h.flap.rememberRoot(obj, ev.GVR)
+		suppress = h.flap.shouldThrottle(obj, h.flap.clock(), ev.GVR)
 	}
-	h.push(Event{Type: ev.Type, Object: obj, GVR: ev.GVR})
+	if !suppress {
+		if h.flap != nil {
+			h.flap.decorateRoot(obj)
+		}
+		h.push(Event{Type: ev.Type, Object: obj, GVR: ev.GVR})
+	}
+	if h.flap != nil {
+		for _, extra := range h.flap.takeDirtyRoots() {
+			h.push(Event{Type: TypeModified, Object: extra.object, GVR: extra.gvr})
+		}
+	}
 }
 
 func (h *Hub) push(ev Event) {

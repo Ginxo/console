@@ -181,14 +181,13 @@ func (h *Hub) applyFlapOverlay(objs []informers.ForwardedObject) {
 		return
 	}
 	for i := range objs {
-		kind := objs[i].Object.GetKind()
-		if kind != policyKind {
+		if objs[i].Object.GetKind() != policyKind {
 			continue
 		}
-		ov, ok := h.flap.overlay(kind, objs[i].Object.GetNamespace(), objs[i].Object.GetName())
+		next, ok := h.flap.clientPolicy(objs[i].Object.GetNamespace(), objs[i].Object.GetName(), objs[i].Object.Object)
 		if !ok {
 			continue
 		}
-		objs[i].Object = unstructured.Unstructured{Object: ov}
+		objs[i].Object = unstructured.Unstructured{Object: next}
 	}
 }

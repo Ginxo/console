@@ -58,6 +58,66 @@ func TestOnResourceSkipsThrottledPolicy(t *testing.T) {
 	}
 }
 
+func TestOnResourcePublishesRootViolation(t *testing.T) {
+	h := New(nil, nil)
+	h.flap = newFlapState(testFlapConfig())
+	c := h.subscribe()
+	defer h.unsubscribe(c)
+
+	at := time.Unix(1_700_000_000, 0)
+	cur := at
+	h.flap.now = func() time.Time { return cur }
+	gvr := schema.GroupVersionResource{Group: "policy.open-cluster-management.io", Version: "v1", Resource: "policies"}
+	h.OnResource(informers.ResourceEvent{
+		Type:   informers.EventModified,
+		GVR:    gvr,
+		Object: &unstructured.Unstructured{Object: rootPolicy("default", "kike-foo", "weekly", "Compliant")},
+	})
+	cur = at.Add(-h.flap.cfg.settling - time.Second)
+	h.OnResource(informers.ResourceEvent{
+		Type:   informers.EventModified,
+		GVR:    gvr,
+		Object: &unstructured.Unstructured{Object: replicatedFlappingPolicy("default", "kike-foo", "weekly")},
+	})
+	cur = at
+	for i := 0; i < h.flap.cfg.threshold+1; i++ {
+		h.OnResource(informers.ResourceEvent{
+			Type:   informers.EventModified,
+			GVR:    gvr,
+			Object: &unstructured.Unstructured{Object: replicatedFlappingPolicy("default", "kike-foo", "weekly")},
+		})
+		cur = cur.Add(time.Millisecond)
+	}
+
+	var sawRoot, sawPropagated bool
+	for {
+		select {
+		case ev := <-c.ch:
+			if ev.Type != TypeModified || ev.Object == nil {
+				continue
+			}
+			meta, _ := ev.Object["metadata"].(map[string]any)
+			name, _ := meta["name"].(string)
+			status, _ := ev.Object["status"].(map[string]any)
+			switch name {
+			case "kike-foo":
+				if status["compliant"] == "NonCompliant" {
+					sawRoot = true
+				}
+			case "default.kike-foo":
+				if ev.Object["throttled"] == true && status["compliant"] == "NonCompliant" {
+					sawPropagated = true
+				}
+			}
+		default:
+			if !sawRoot || !sawPropagated {
+				t.Fatalf("root=%v propagated=%v", sawRoot, sawPropagated)
+			}
+			return
+		}
+	}
+}
+
 func TestOnResourceFansPolicyWhenCooldownAllows(t *testing.T) {
 	h := New(nil, nil)
 	h.flap = newFlapState(testFlapConfig())
