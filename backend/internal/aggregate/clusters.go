@@ -353,6 +353,8 @@ func clusterProxyURL(service map[string]any, cluster string) string {
 	if ports := nestedSlice(service, "spec", "ports"); len(ports) > 0 {
 		if p, ok := ports[0].(map[string]any); ok {
 			switch v := p["port"].(type) {
+			case int64:
+				port = int(v)
 			case float64:
 				port = int(v)
 			case int:
