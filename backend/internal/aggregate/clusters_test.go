@@ -63,3 +63,41 @@ func TestArgoDestinationMatchesInt64ProxyPort(t *testing.T) {
 		t.Fatalf("got %q want remote (int64 Service port must match dest.server)", got)
 	}
 }
+
+func TestIsLocalClusterURLEmptyAndInvalid(t *testing.T) {
+	local := &Cluster{Name: "local-cluster", ConsoleURL: "https://console-openshift-console.apps.hub.example.com"}
+	cases := []struct {
+		name string
+		raw  string
+		want bool
+	}{
+		{name: "empty", raw: "", want: false},
+		{name: "scheme-less", raw: "not-a-url", want: false},
+		{name: "api-only", raw: "https://api.", want: false},
+		{name: "default-svc", raw: "https://kubernetes.default.svc", want: true},
+		{name: "matching-api", raw: "https://api.hub.example.com:6443", want: true},
+		{name: "unrelated", raw: "https://api.remote.example.com:6443", want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isLocalClusterURL(tc.raw, local); got != tc.want {
+				t.Fatalf("isLocalClusterURL(%q)=%v want %v", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArgoPushModelClustersNameOnlyRemote(t *testing.T) {
+	e := NewEngine(nil, nil, nil)
+	local := &Cluster{Name: "local-cluster", ConsoleURL: "https://console-openshift-console.apps.hub.example.com"}
+	managed := []Cluster{{Name: "local-cluster"}, {Name: "remote"}}
+	resources := []map[string]any{{
+		"spec": map[string]any{
+			"destination": map[string]any{"name": "remote"},
+		},
+	}}
+	got := e.argoPushModelClusters(resources, local, managed)
+	if len(got) != 1 || got[0] != "remote" {
+		t.Fatalf("got %v want [remote] (empty dest.server must not count as local)", got)
+	}
+}

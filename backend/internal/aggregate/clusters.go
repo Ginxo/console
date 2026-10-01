@@ -221,7 +221,7 @@ func isLocalClusterURL(raw string, local *Cluster) bool {
 		}
 	}
 	u, err := url.Parse(raw)
-	if err != nil {
+	if err != nil || u.Hostname() == "" {
 		return false
 	}
 	host := u.Hostname()
@@ -230,6 +230,9 @@ func isLocalClusterURL(raw string, local *Cluster) bool {
 		return strings.Contains(localHost, host)
 	}
 	hostnameWithoutAPI := host[idx+4:]
+	if hostnameWithoutAPI == "" {
+		return false
+	}
 	return strings.Contains(localHost, hostnameWithoutAPI)
 }
 
