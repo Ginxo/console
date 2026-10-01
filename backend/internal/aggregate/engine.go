@@ -108,13 +108,15 @@ func (e *Engine) Start(ctx context.Context) {
 func (e *Engine) discoverPrefixes(ctx context.Context) {
 	prefixes := []string{"openshift", "hive", "open-cluster-management"}
 	if e.Dynamic != nil {
-		ns, err := hubresources.MCHNamespace(ctx, e.Dynamic)
+		lctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		ns, err := hubresources.MCHNamespace(lctx, e.Dynamic)
 		if err != nil {
 			applog.Logger().Error("mch namespace", "error", err)
 		} else if ns != "" && ns != "open-cluster-management" {
 			prefixes = append(prefixes, ns)
 		}
-		mce, err := hubresources.MCETargetNamespace(ctx, e.Dynamic)
+		mce, err := hubresources.MCETargetNamespace(lctx, e.Dynamic)
 		if err != nil || mce == "" {
 			prefixes = append(prefixes, "multicluster-engine")
 		} else {
