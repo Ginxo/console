@@ -136,28 +136,23 @@ func (e *Engine) searchLoop(ctx context.Context) {
 			return
 		}
 		if e.Search != nil {
-			for {
-				ok, err := e.Search.Ping(ctx)
-				if err != nil || !ok {
-					if !searchAPIMissing {
-						applog.Logger().Error("search API missing")
-						searchAPIMissing = true
-					}
-					select {
-					case <-ctx.Done():
-						return
-					case <-time.After(5 * time.Minute):
-					}
-					continue
+			ok, err := e.Search.Ping(ctx)
+			if err != nil || !ok {
+				if ctx.Err() != nil {
+					return
 				}
-				break
-			}
-			if searchAPIMissing {
-				applog.Logger().Info("search API found")
-				searchAPIMissing = false
-			}
-			if err := e.aggregateRemote(ctx, pass); err != nil {
-				applog.Logger().Error("aggregateRemoteApplications exception", "error", err)
+				if !searchAPIMissing {
+					applog.Logger().Error("search API missing")
+					searchAPIMissing = true
+				}
+			} else {
+				if searchAPIMissing {
+					applog.Logger().Info("search API found")
+					searchAPIMissing = false
+				}
+				if err := e.aggregateRemote(ctx, pass); err != nil {
+					applog.Logger().Error("aggregateRemoteApplications exception", "error", err)
+				}
 			}
 		}
 		e.mu.Lock()
@@ -165,7 +160,9 @@ func (e *Engine) searchLoop(ctx context.Context) {
 		e.mu.Unlock()
 		pass++
 		wait := 15 * time.Second
-		if pass > firstPassesFastInterval {
+		if searchAPIMissing {
+			wait = 5 * time.Minute
+		} else if pass > firstPassesFastInterval {
 			wait = e.searchInterval()
 		}
 		select {
