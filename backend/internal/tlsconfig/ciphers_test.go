@@ -57,6 +57,16 @@ func TestMapCiphersOldProfileIncludesLegacyRSA(t *testing.T) {
 	}
 }
 
+func TestIsRSAKeyExchangeCipher(t *testing.T) {
+	t.Parallel()
+	if !isRSAKeyExchangeCipher(tls.TLS_RSA_WITH_AES_128_GCM_SHA256) {
+		t.Fatal("expected TLS_RSA_WITH_AES_128_GCM_SHA256")
+	}
+	if isRSAKeyExchangeCipher(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) {
+		t.Fatal("ECDHE must not count as RSA key exchange")
+	}
+}
+
 func TestIsTLS13Cipher(t *testing.T) {
 	t.Parallel()
 	if !isTLS13Cipher(tls.TLS_AES_128_GCM_SHA256) {

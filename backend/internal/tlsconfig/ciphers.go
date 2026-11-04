@@ -69,6 +69,22 @@ func isTLS13Cipher(id uint16) bool {
 	}
 }
 
+// isRSAKeyExchangeCipher reports TLS 1.2 RSA key-exchange suites by IANA id.
+// Prefer IDs over CipherSuiteName string prefixes so renaming cannot widen policy.
+func isRSAKeyExchangeCipher(id uint16) bool {
+	switch id {
+	case tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+		tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA:
+		return true
+	default:
+		return false
+	}
+}
+
 // mapCiphers converts OpenShift/OpenSSL cipher names to TLS 1.2 ids. Unknown
 // names and TLS 1.3 suites are skipped (parity with Node getCiphers() filter
 // plus Go's inability to pin TLS 1.3 suites).
