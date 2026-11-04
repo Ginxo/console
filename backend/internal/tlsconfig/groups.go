@@ -7,6 +7,9 @@ import (
 	"errors"
 	"slices"
 
+	// openshift/api + library-go are pulled for TLSGroupsToCurveIDs only so
+	// Console does not maintain a second OpenShift group-name map. Accept the
+	// transitive weight (incl. k8s.io/apiserver) for that single converter.
 	configv1 "github.com/openshift/api/config/v1"
 	librarycrypto "github.com/openshift/library-go/pkg/crypto"
 )
@@ -55,8 +58,9 @@ func groupsForProfile(p SecurityProfile, fips bool) (groupCandidate, error) {
 	return candidate, nil
 }
 
-// fipsPermitsCurve preserves the Node policy allowlist. This is a policy check;
-// conversion alone does not establish runtime support or FIPS approval.
+// fipsPermitsCurve is intentional Console/Node FIPS policy on CurveIDs, not
+// library-go conversion. Dropping the name→ID map still leaves this allowlist:
+// conversion success does not mean FIPS approval or runtime support.
 func fipsPermitsCurve(curve tls.CurveID) bool {
 	switch curve {
 	case tls.CurveP256, tls.CurveP384, tls.CurveP521, tls.SecP256r1MLKEM768, tls.SecP384r1MLKEM1024:

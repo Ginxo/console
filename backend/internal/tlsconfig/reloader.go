@@ -66,7 +66,8 @@ func (r *Reloader) GetConfigForClient(hello *tls.ClientHelloInfo) (*tls.Config, 
 		if err := restrictToRSAKeyExchange(&s, hello); err != nil {
 			return nil, err
 		}
-		// HTTP/2 disallows the TLS_RSA_* suites used by this fallback.
+		// Advertise http/1.1 only: HTTP/2 blacklists TLS_RSA_* (see
+		// TestEmptyGroupsRSAUsesHTTP11). Offering h2 here fails the connection.
 		nextProtos = []string{nextProtoHTTP11}
 	}
 	cfg := &tls.Config{

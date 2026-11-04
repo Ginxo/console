@@ -81,6 +81,7 @@ func TestEmptyGroupsNodeParity(t *testing.T) {
 	}
 }
 
+// Confirms RSA-only fallback does not advertise h2 (HTTP/2 cipher blacklist).
 func TestEmptyGroupsRSAUsesHTTP11(t *testing.T) {
 	dir := t.TempDir()
 	cert, key := writeRSACert(t, dir, "rsa-http11")
