@@ -39,19 +39,23 @@ type discoveryRefresh struct {
 
 // request invalidates mapper's cached discovery and reports whether it did.
 // It returns false when mapper does not cache, or when another spec already
-// forced a refetch within discoveryRefreshInterval — the caller should then
-// keep the failure it already has and wait for its next retry.
+// forced a refetch within discoveryRefreshInterval. Callers that cache should
+// still re-resolve after a denied request so they pick up the document the
+// winner just refreshed, without waiting for the next retry round.
 func (r *discoveryRefresh) request(mapper ResourceMapper) bool {
 	inv, ok := mapper.(CacheInvalidator)
 	if !ok {
 		return false
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if !r.last.IsZero() && time.Since(r.last) < discoveryRefreshInterval {
+		r.mu.Unlock()
 		return false
 	}
 	r.last = time.Now()
+	r.mu.Unlock()
+	// Invalidate outside the throttle lock: client-go only flips a flag, but a
+	// mapper that did more work must not run under r.mu.
 	inv.Invalidate()
 	return true
 }
