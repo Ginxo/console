@@ -81,6 +81,14 @@ import Clusters from '../../Clusters'
 jest.mock('../../../../UserManagement/Identities/Groups/useGroupsSearch', () => ({
   useHasHubGroups: jest.fn(() => ({ hasGroups: true, loaded: true })),
   useGroupIdentity: jest.fn(() => undefined),
+  useMraGroupSubjects: jest.fn(() => []),
+  preferSearchBackedGroups: (groups: unknown[]) => groups,
+  isSearchBackedGroup: (group: { metadata?: { name?: string; uid?: string }; userCount?: number }) => {
+    if (group.userCount !== undefined) return true
+    const name = group.metadata?.name
+    const uid = group.metadata?.uid
+    return Boolean(uid && name && uid !== name)
+  },
   useGroupsSearch: jest.fn(() => ({
     groups: [
       {
@@ -103,6 +111,13 @@ jest.mock('../../../../UserManagement/Identities/Users/useUsersSearch', () => ({
   useHasHubUsers: jest.fn(() => ({ hasUsers: true, loaded: true })),
   useUserIdentity: jest.fn(() => undefined),
   useUsersByNames: jest.fn(() => ({ users: [], loaded: true })),
+  useMraUserSubjects: jest.fn(() => []),
+  preferSearchBackedUsers: (users: unknown) => users,
+  isSearchBackedUser: (user: { metadata?: { name?: string; uid?: string } }) => {
+    const name = user.metadata?.name
+    const uid = user.metadata?.uid
+    return Boolean(uid && name && uid !== name)
+  },
   useUsersSearch: jest.fn(() => ({
     users: [
       {

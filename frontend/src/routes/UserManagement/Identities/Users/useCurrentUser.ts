@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { generatePath, useNavigate, useParams } from 'react-router'
 import { useFleetSearchSubscription } from '@stolostron/multicluster-sdk/lib/api/useFleetSearchSubscription'
 import { useLocalHubName } from '../../../../hooks/use-local-hub'
@@ -9,6 +9,7 @@ import { User, UserApiVersion, UserKind } from '../../../../resources/rbac'
 import { getResource, ResourceError, ResourceErrorCode } from '../../../../resources/utils'
 import { useSharedAtoms, useSharedValue } from '../../../../shared-atoms'
 import { AcmToastContext } from '../../../../ui-components'
+import { resolveIndexedThenRead, useIdentityLiveEvents } from '../searchIdentityHelpers'
 import { usersFromMulticlusterRoleAssignments } from '../useMergedIdentities'
 import { findIndexedUserName, hubUserWatchFilters } from './useUsersSearch'
 
@@ -29,28 +30,6 @@ async function readUser(name: string): Promise<User | undefined> {
     if (err instanceof ResourceError && err.code === ResourceErrorCode.NotFound) return undefined
     throw err
   }
-}
-
-function eventName(data: { name?: unknown } | null | undefined): string | undefined {
-  return typeof data?.name === 'string' ? data.name : undefined
-}
-
-function eventMatchesUser(
-  uid: string,
-  name: string | undefined,
-  userUid: string | undefined,
-  userName: string | undefined
-): boolean {
-  if (userName && name === userName) return true
-  if (!userUid || !uid) return false
-  return uid === userUid || uid.endsWith(`/${userUid}`)
-}
-
-/** useNavigate returns void in declarative mode and a Promise in data routers. */
-function settleNavigation(navigation: void | Promise<void>) {
-  Promise.resolve(navigation).catch(() => {
-    // The toast already explains the deletion; a failed redirect should not surface again.
-  })
 }
 
 export const useCurrentUser = (): CurrentUser => {
@@ -77,13 +56,13 @@ export const useCurrentUser = (): CurrentUser => {
     [id, mras]
   )
   const watchedName = fetched?.metadata?.name ?? mraIdentity?.metadata?.name
-  // Name-scoped hub User watch (Search User items currently omit groups / group counts;
-  // membership live-updates need Search indexer support — track separately).
   const watchInput = useMemo(
     () => (watchedName ? { filters: hubUserWatchFilters(watchedName) } : undefined),
     [watchedName]
   )
   const [latestEvent] = useFleetSearchSubscription(watchInput)
+  // Boolean (not the MRA object) so the load effect can retry when MRA data arrives without looping.
+  const allowForbiddenWhenUnresolved = Boolean(mraIdentity)
 
   useEffect(() => {
     if (!id) {
@@ -99,28 +78,13 @@ export const useCurrentUser = (): CurrentUser => {
 
     const load = async () => {
       try {
-        // Same path for uid or name in the URL: Search → resolve name → getResource (full CR).
-        // Search alone is not enough (no identities/groups/fullName); MRA synthetic is last resort only.
-        let indexedName: string | undefined
-        try {
-          indexedName = await findIndexedUserName(id, hubName)
-        } catch {
-          // Search failures must not block the MRA-only fallback below.
-          indexedName = undefined
-        }
+        // Search alone is not enough (no identities/groups/fullName); MRA synthetic is last resort.
+        // Forbidden on an unresolved route id with a matching MRA must not hide the stub.
+        const resolved = await resolveIndexedThenRead(id, hubName, findIndexedUserName, readUser, {
+          allowForbiddenWhenUnresolved,
+        })
         if (cancelled) return
-        if (indexedName) {
-          const resolved = await readUser(indexedName)
-          if (cancelled) return
-          if (resolved) {
-            setFetched(resolved)
-            setLoaded(true)
-            return
-          }
-        }
-
-        if (cancelled) return
-        setFetched(undefined)
+        setFetched(resolved)
         setLoaded(true)
       } catch (err) {
         if (cancelled) return
@@ -134,67 +98,42 @@ export const useCurrentUser = (): CurrentUser => {
     return () => {
       cancelled = true
     }
-  }, [hubName, id])
+  }, [allowForbiddenWhenUnresolved, hubName, id])
 
-  const handledEventKey = useRef<string | undefined>(undefined)
-  const watchedNameRef = useRef(watchedName)
-  useEffect(() => {
-    watchedNameRef.current = watchedName
-  }, [watchedName])
+  const hasRoleAssignment = useCallback(
+    (name: string) =>
+      usersFromMulticlusterRoleAssignments(mras ?? [], new Set()).some((candidate) => candidate.metadata.name === name),
+    [mras]
+  )
+  const toastWarning = useCallback(
+    (title: string) => toast.addAlert({ type: 'warning', title, autoClose: true }),
+    [toast]
+  )
+  const deletedWithRoleAssignmentTitle = useCallback(
+    (name: string) => t('User {{name}} was deleted. Showing the identity from the role assignment.', { name }),
+    [t]
+  )
+  const deletedTitle = useCallback((name: string) => t('User {{name}} was deleted.', { name }), [t])
+  const detailsPath = useCallback(
+    (name: string) => generatePath(NavigationPath.identitiesUsersDetails, { id: name }),
+    []
+  )
 
-  useEffect(() => {
-    if (!latestEvent || !watchedName) return
-    const key = `${latestEvent.operation}:${latestEvent.uid}:${String(latestEvent.timestamp)}`
-    if (handledEventKey.current === key) return
-
-    const userUid = fetched?.metadata?.uid
-    const dataName = eventName(latestEvent.newData) ?? eventName(latestEvent.oldData)
-    if (!eventMatchesUser(latestEvent.uid, dataName, userUid, watchedName)) return
-    handledEventKey.current = key
-
-    if (latestEvent.operation === 'DELETE') {
-      // Match by User name: the route id may still be the CR uid while the MRA subject is the name.
-      const hasRoleAssignment = usersFromMulticlusterRoleAssignments(mras ?? [], new Set()).some(
-        (candidate) => candidate.metadata.name === watchedName
-      )
-      if (hasRoleAssignment) {
-        toast.addAlert({
-          type: 'warning',
-          title: t('User {{name}} was deleted. Showing the identity from the role assignment.', {
-            name: watchedName,
-          }),
-          autoClose: true,
-        })
-        if (id !== watchedName) {
-          settleNavigation(
-            navigate(generatePath(NavigationPath.identitiesUsersDetails, { id: watchedName }), { replace: true })
-          )
-        } else {
-          setFetched(undefined)
-        }
-        return
-      }
-      toast.addAlert({
-        type: 'warning',
-        title: t('User {{name}} was deleted.', { name: watchedName }),
-        autoClose: true,
-      })
-      settleNavigation(navigate(NavigationPath.identitiesUsers, { replace: true }))
-      return
-    }
-
-    if (latestEvent.operation !== 'UPDATE' && latestEvent.operation !== 'INSERT') return
-
-    const name = watchedName
-    void readUser(name)
-      .then((resolved) => {
-        if (watchedNameRef.current !== name || !resolved) return
-        setFetched(resolved)
-      })
-      .catch(() => {
-        // Keep whatever is on screen (CR or MRA stub) if the background refresh fails.
-      })
-  }, [fetched?.metadata?.uid, id, latestEvent, mras, navigate, t, toast, watchedName])
+  useIdentityLiveEvents({
+    latestEvent,
+    watchedName,
+    routeId: id,
+    resourceUid: fetched?.metadata?.uid,
+    hasRoleAssignment,
+    readResource: readUser,
+    setFetched,
+    toastWarning,
+    deletedWithRoleAssignmentTitle,
+    deletedTitle,
+    detailsPath,
+    listPath: NavigationPath.identitiesUsers,
+    navigate,
+  })
 
   const synthetic = loaded && !fetched && !error ? mraIdentity : undefined
 

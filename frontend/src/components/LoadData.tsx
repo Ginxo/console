@@ -90,8 +90,6 @@ import {
   PolicyAutomationApiVersion,
   PolicyAutomationKind,
   PolicyKind,
-  PolicyReportApiVersion,
-  PolicyReportKind,
   PolicySetApiVersion,
   PolicySetKind,
   RbacApiVersion,
@@ -166,7 +164,6 @@ import {
   placementsState,
   policiesState,
   policyAutomationState,
-  policyreportState,
   policySetsState,
   searchOperatorState,
   secretsState,
@@ -257,7 +254,6 @@ export function LoadData(props: { children?: ReactNode }) {
   const setPlacementsState = useSetAtom(placementsState)
   const setPoliciesState = useSetAtom(policiesState)
   const setPolicyAutomationState = useSetAtom(policyAutomationState)
-  const setPolicyReports = useSetAtom(policyreportState)
   const setPolicySetsState = useSetAtom(policySetsState)
   const setSearchOperator = useSetAtom(searchOperatorState)
   const setSecrets = useSetAtom(secretsState)
@@ -305,7 +301,7 @@ export function LoadData(props: { children?: ReactNode }) {
     addMapper(ManagedClusterAddOnApiVersion, ManagedClusterAddOnKind, setManagedClusterAddons, ['metadata.namespace'])
 
     // setters
-    addSetter('argoproj.io/v1alpha1', 'ArgoCD', setArgoCDsState)
+    addSetter('argoproj.io/v1beta1', 'ArgoCD', setArgoCDsState)
     addSetter(AgentClusterInstallApiVersion, AgentClusterInstallKind, setAgentClusterInstalls)
     addSetter(AgentKindVersion, AgentKind, setAgents)
     addSetter(AgentMachineApiVersion, AgentMachineKind, setAgentMachinesState)
@@ -347,7 +343,6 @@ export function LoadData(props: { children?: ReactNode }) {
     addSetter(PlacementDecisionApiVersion, PlacementDecisionKind, setPlacementDecisionsState)
     addSetter(PolicyApiVersion, PolicyKind, setPoliciesState)
     addSetter(PolicyAutomationApiVersion, PolicyAutomationKind, setPolicyAutomationState)
-    addSetter(PolicyReportApiVersion, PolicyReportKind, setPolicyReports)
     addSetter(PolicySetApiVersion, PolicySetKind, setPolicySetsState)
     addSetter(RbacApiVersion, ClusterRoleKind, setVMClusterRoles)
     addSetter(SearchOperatorApiVersion, SearchOperatorKind, setSearchOperator)
@@ -406,7 +401,6 @@ export function LoadData(props: { children?: ReactNode }) {
     setPlacementsState,
     setPoliciesState,
     setPolicyAutomationState,
-    setPolicyReports,
     setPolicySetsState,
     setSearchOperator,
     setSecrets,
@@ -686,13 +680,13 @@ export function LoadData(props: { children?: ReactNode }) {
               if (process.env.NODE_ENV === 'development' && res.status === 504) {
                 window.location.reload()
               } else {
-                tokenExpired()
+                void tokenExpired()
               }
               break
           }
         })
         .catch(() => {
-          tokenExpired()
+          void tokenExpired()
         })
         .finally(() => {
           setTimeout(checkLoggedIn, 30 * 1000)

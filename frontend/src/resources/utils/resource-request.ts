@@ -799,11 +799,9 @@ export async function fetchRetry<T>(options: {
   const headers: Record<string, string> = options.headers ?? {
     Accept: 'application/json',
   }
-
-  const csrfToken = getCookie('csrf-token')
-  if (csrfToken && (options.method ?? 'GET') !== 'GET' && options.url.startsWith('/')) {
-    headers['X-CSRFToken'] = csrfToken
-  }
+  let csrfRetried = false
+  const method = options.method ?? 'GET'
+  const sendsCsrf = method !== 'GET' && options.url.startsWith('/')
 
   let fetchBody: string | undefined
   if (options.data) {
@@ -818,10 +816,15 @@ export async function fetchRetry<T>(options: {
   }
 
   while (true) {
+    if (sendsCsrf) {
+      const csrfToken = getCookie('csrf-token')
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken
+    }
+
     let response: Response | undefined
     try {
       response = await fetch(options.url, {
-        method: options.method ?? 'GET',
+        method,
         credentials: 'include',
         headers,
         body: fetchBody,
@@ -883,13 +886,26 @@ export async function fetchRetry<T>(options: {
         if (status.status !== 'Success') {
           if (status.code === 401) {
             // 401 is returned from kubernetes in a Status object if token is not valid
-            tokenExpired()
+            void tokenExpired()
             throw new ResourceError(status.code as number, status.message as string, status.reason)
           } else if (ResourceErrorCodes.includes(status.code as number)) {
             throw new ResourceError(status.code as number, status.message as string, status.reason)
           } else {
             throw new ResourceError(ResourceErrorCode.Unknown, status.message as string, status.reason)
           }
+        }
+      }
+
+      if (
+        response.status === 403 &&
+        !csrfRetried &&
+        typeof responseData === 'string' &&
+        responseData.includes('CSRF token does not match')
+      ) {
+        const freshToken = getCookie('csrf-token')
+        if (freshToken && freshToken !== headers['X-CSRFToken']) {
+          csrfRetried = true
+          continue
         }
       }
 
@@ -905,7 +921,7 @@ export async function fetchRetry<T>(options: {
         case 302: // 302 is returned when token is valid but logged out
         case 401: // 401 is returned from the backend if no token cookie is on request
           if (!options.disableRedirectUnauthorizedLogin) {
-            tokenExpired()
+            void tokenExpired()
           }
           throw new ResourceError(ResourceErrorCode.Unauthorized)
         case 404:
