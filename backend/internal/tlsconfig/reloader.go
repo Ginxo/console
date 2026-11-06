@@ -86,9 +86,8 @@ func (r *Reloader) GetConfigForClient(hello *tls.ClientHelloInfo) (*tls.Config, 
 // and ECDHE fail, while explicitly configured RSA key exchange can still work.
 // Clients that advertise TLS 1.3 in SupportedVersions are rejected outright —
 // they never negotiate TLS 1.2 RSA (Node parity; stricter than capping MaxVersion).
-// Empty CurvePreferences would select Go's default groups for ECDHE, so after
-// this fallback CipherSuites must stay RSA-only and Curves is cleared; TLS 1.2
-// RSA does not use a group.
+// TLS 1.2 RSA does not use a group. Empty CurvePreferences still selects Go's
+// default groups for ECDHE, so the safeguard is keeping CipherSuites RSA-only.
 func restrictToRSAKeyExchange(s *Settings, hello *tls.ClientHelloInfo) error {
 	if hello == nil || s.MinVersion >= tls.VersionTLS13 {
 		return errNoUsableTLSGroups
@@ -110,9 +109,9 @@ func restrictToRSAKeyExchange(s *Settings, hello *tls.ClientHelloInfo) error {
 	if len(rsaCiphers) == 0 {
 		return errNoUsableTLSGroups
 	}
+	// Empty CurvePreferences uses Go's defaults, so keep this fallback RSA-only
+	// to prevent ECDHE from being negotiated.
 	s.CipherSuites = rsaCiphers
-	// Cleared so a later cipher regression cannot pair ECDHE with Go default groups.
-	s.Curves = nil
 	return nil
 }
 

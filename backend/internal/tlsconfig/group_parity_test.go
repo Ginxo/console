@@ -128,9 +128,9 @@ func TestEmptyGroupsRSAUsesHTTP11(t *testing.T) {
 	}
 }
 
-// Locks the unusable-group handshake config: RSA-only suites, no published
-// curves (empty CurvePreferences must not pair with ECDHE), HTTP/1.1 only,
-// and MaxVersion capped at TLS 1.2.
+// Locks the unusable-group handshake safeguard: fallback CipherSuites must be
+// RSA key-exchange only (empty CurvePreferences still uses Go's ECDHE defaults).
+// Also checks HTTP/1.1-only ALPN and MaxVersion capped at TLS 1.2.
 func TestUnusableGroupsHandshakeConfigInvariant(t *testing.T) {
 	r := NewReloader()
 	r.Apply(fromProfile(SecurityProfile{Type: "Custom", Custom: &CustomSpec{
@@ -146,11 +146,13 @@ func TestUnusableGroupsHandshakeConfigInvariant(t *testing.T) {
 	if cfg.MaxVersion != tls.VersionTLS12 {
 		t.Fatalf("MaxVersion 0x%x want TLS 1.2", cfg.MaxVersion)
 	}
-	if len(cfg.CurvePreferences) != 0 {
-		t.Fatalf("CurvePreferences %v; want empty so ECDHE cannot use Go defaults", cfg.CurvePreferences)
+	if len(cfg.CipherSuites) == 0 {
+		t.Fatal("CipherSuites empty; want at least one RSA key-exchange suite")
 	}
-	if len(cfg.CipherSuites) != 1 || !isRSAKeyExchangeCipher(cfg.CipherSuites[0]) {
-		t.Fatalf("CipherSuites %v; want only RSA key exchange", cfg.CipherSuites)
+	for _, id := range cfg.CipherSuites {
+		if !isRSAKeyExchangeCipher(id) {
+			t.Fatalf("CipherSuites %v; want only RSA key exchange", cfg.CipherSuites)
+		}
 	}
 	if len(cfg.NextProtos) != 1 || cfg.NextProtos[0] != nextProtoHTTP11 {
 		t.Fatalf("NextProtos %v; want http/1.1 only (h2 rejects TLS_RSA_*)", cfg.NextProtos)
